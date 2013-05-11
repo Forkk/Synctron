@@ -1,0 +1,16 @@
+# Python shit
+*.pyc
+*.pyo
+
+
+# Sublime Text crap
+*.sublime-*
+
+
+# virtualenv
+venv/
+
+
+# Other bullshit
+Thumbs.db
+DS_Store

@@ -10,6 +10,8 @@
 {{ super() }}
 
 <script type="text/javascript">
+room_id = "{{ room_id }}"
+
 actions = 
 {
 	error: function(data, sock)
@@ -34,11 +36,11 @@ actions =
 				metadata: function(p)
 				{
 					console.log("works")
-					sock.send(JSON.stringify({ action: "sync" }));
+					sock.send(JSON.stringify({ action: "sync", room_id: room_id }));
 					// Send sync ten seconds later to ensure that we're truly synced-up.
 					setTimeout(function()
 					{
-						sock.send(JSON.stringify({ action: "sync" }));
+						sock.send(JSON.stringify({ action: "sync", room_id: room_id }));
 					}, (10*1000));
 				}
 			});
@@ -75,7 +77,8 @@ $(document).ready(function()
 	ws.onopen = function(evt)
 	{
 		ws.send(JSON.stringify({
-			action: "init"
+			action: "init",
+			room_id: room_id,
 		}));
 	}
 

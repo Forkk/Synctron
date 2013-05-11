@@ -37,7 +37,7 @@ def home_page():
 
 @route("/room/<room_id>")
 def room_page(room_id):
-	return template("player.j2")
+	return template("player.j2", room_id = room_id)
 
 
 # For static files.

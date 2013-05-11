@@ -24,22 +24,35 @@ from bottle.ext.websocket import GeventWebSocketServer
 from bottle.ext.websocket import websocket
 
 import json
+import time
 
 
-def init(data):
+def init(data, sock):
 	"""
 	Action sent by the client when the user joins a room.
 	This function expects the data to contain the following information: pass
 	Responds with information about what's currently going on such as the currently playing video's ID, time, playlist info, etc.
 	"""
 	
-	return {
-		"action": "init",
-
+	# Send setvideo to change the video to the correct video.
+	sock.send(json.dumps({
+		"action": "setvideo",
 		"video_service": "YouTube", # The service that the video is playing from. Only YouTube is supported currently.
 		"video_id": "J5bhT4-9M0o", # The ID of the video that's playing. Currently just a test. Awesome song BTW.
-		"video_time": 0 # The current time on the video in seconds since the beginning of the video.
-	}
+	}))
+
+
+def sync(data, sock):
+	"""
+	Action sent by the server to tell the client what time the video is at.
+	Sent under various conditions.
+	"""
+
+	# Send the sync action to set the client's time.
+	sock.send(json.dumps({
+		"action": "sync",
+		"video_time": 60 # The current time on the video in seconds since the beginning of the video.
+	}))
 
 
 @route("/wsapi", apply=[websocket])
@@ -68,12 +81,10 @@ def websocket_api(sock):
 		if not action in actions:
 			sock.send(json.dumps({ "action": "error", "reason": "invalid_action", "reason_msg": "Invalid action" }))
 		else:
-			retdata = actions[action](data)
-			if retdata is not None:
-				sock.send(json.dumps(retdata))
+			actions[action](data, sock)
 
 
 actions = {
 	"init": init,
-
+	"sync": sync,
 }

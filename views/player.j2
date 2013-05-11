@@ -2,7 +2,7 @@
 
 {% block js_head %}
 {{ super() }}
-<script type="text/javascript" src="/static/js/swfobject.js"></script>    
+<script type="text/javascript" src="//cdn.sublimevideo.net/js/xj8gmt4v.js"></script>   
 {% endblock %}
 
 
@@ -10,30 +10,52 @@
 {{ super() }}
 
 <script type="text/javascript">
-var params = { allowScriptAccess: "always" };
-var atts = { id: "ytplayer" };
-swfobject.embedSWF("http://www.youtube.com/apiplayer?enablejsapi=1&version=3",
-					"ytplayer", "425", "356", "8", null, null, params, atts);
-
-
 actions = 
 {
-	// Handles the init action sent from the server.
-	// Expects the following fields in data: video_id, and video_time
-	// Doesn't return anything.
-	init: function(data)
+	error: function(data, sock)
 	{
-		var player = document.getElementById("ytplayer");
-		player.loadVideoById(data.video_id, data.video_time);
-		player.playVideo();
-		// Just to keep me from going insane until the volume controls are implemented.
-		player.setVolume(15);
+		console.log(JSON.stringify(data));
+		alert(data.reason_msg);
+	},
+
+	// Handles the init action sent from the server.
+	// Expects the following fields in data: video_id
+	// Doesn't return anything.
+	setvideo: function(data, sock)
+	{
+		$("#player-div").html('<video id="player" class="sublime" width="640" height="360" data-uid="" data-youtube-id="' + data.video_id + '" preload="none"></video>');
+		sublime.load();
+		sublime.ready(function()
+		{
+			var player = sublime.player("player");
+			player.play();
+
+			player.on({
+				metadata: function(p)
+				{
+					console.log("works")
+					sock.send(JSON.stringify({ action: "sync" }));
+					// Send sync ten seconds later to ensure that we're truly synced-up.
+					setTimeout(function()
+					{
+						sock.send(JSON.stringify({ action: "sync" }));
+					}, (10*1000));
+				}
+			});
+		});
+	},
+
+	// Handles the sync action sent from the server.
+	// Expects the following fields: video_time
+	sync: function(data, sock)
+	{
+		sublime.player("player").seekTo(data.video_time);
 	}
 }
 
 
 // Websocket stuff
-function onYouTubePlayerReady(playerid)
+$(document).ready(function()
 {
 	if (!window.WebSocket)
 	{
@@ -59,6 +81,8 @@ function onYouTubePlayerReady(playerid)
 
 	ws.onmessage = function(evt)
 	{
+		console.log("Message from server: " + evt.data);
+
 		var data;
 		var action;
 
@@ -84,13 +108,13 @@ function onYouTubePlayerReady(playerid)
 		}
 		else
 		{
-			actionFunc(data);
+			actionFunc(data, ws);
 		}
 	}
 
 	ws.onclose = function(evt)
 	{
-		alert("WebSocket closed!");
+		console.log("WebSocket closed.");
 	}
 
 	$('#send').submit(function()
@@ -99,7 +123,7 @@ function onYouTubePlayerReady(playerid)
 		$('input:first').val('').focus();
 		return false;
 	});
-};
+});
 
 </script>
 
@@ -109,9 +133,7 @@ function onYouTubePlayerReady(playerid)
 
 {% block content %}
 
-<div id="ytplayer">
-	You need Flash player 8+ and JavaScript enabled to view this video.
-</div>
+<div id="player-div"></div>
 
 {% endblock %}
 

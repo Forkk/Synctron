@@ -121,6 +121,7 @@ def sync(data, sock):
 def play(data, sock):
 	"""
 	Plays the video. Duh...
+	This also is used for seeking. When a seek is done, the client sends a play event and specifies the time that was seeked to.
 	All this really does is update start_time and set is_playing to True
 	"""
 
@@ -137,6 +138,7 @@ def play(data, sock):
 	print "Playing room %s" % data["room_id"]
 
 	room["is_playing"] = True
+	room["current_pos"] = data["time"]
 	room["start_time"] = int(time.time())
 	__sync_all_clients__(room)
 

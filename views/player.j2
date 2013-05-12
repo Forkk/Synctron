@@ -96,6 +96,7 @@ $(document).ready(function()
 // VIDEO PLAYER STUFF //
 ////////////////////////
 
+var ignorePlayPause = false;
 
 actions = 
 {
@@ -110,37 +111,50 @@ actions =
 	// Doesn't return anything.
 	setvideo: function(data, sock)
 	{
+		var lastState = -2;
+
 		vplayer = new YT.Player("player", {
 			width: "640",
 			height: "380",
 			videoId: data.video_id,
 			events: {
-				"onStateChange": function(event)
+				onStateChange: function(event)
 				{
-					if (event.data == YT.PlayerState.PLAYING)
+					if (event.data == YT.PlayerState.PLAYING && lastState != YT.PlayerState.PLAYING)
 					{
+						console.log("Sending play action...");
 						ws.send(JSON.stringify({ action: "play", room_id: room_id }));
 					}
-					else if (event.data == YT.PlayerState.PAUSED)
+					else if (event.data == YT.PlayerState.PAUSED && lastState != YT.PlayerState.PAUSED)
 					{
+						console.log("Sending pause action... ");
 						ws.send(JSON.stringify({ action: "pause", room_id: room_id }));
 					}
-				}
+
+					lastState = event.data;
+				},
+
+				onReady: function(event)
+				{
+					console.log("Requesting sync...");
+					ws.send(JSON.stringify({ action: "sync", room_id: room_id }));
+				},
 			}
 		});
 
-		ws.send(JSON.stringify({ action: "sync", room_id: room_id }));
 		// Send sync again ten seconds later to ensure that we're truly synced-up.
-		setTimeout(function()
-		{
-			ws.send(JSON.stringify({ action: "sync", room_id: room_id }));
-		}, (10*1000));
+		// setTimeout(function()
+		// {
+		// 	ws.send(JSON.stringify({ action: "sync", room_id: room_id }));
+		// }, (10*1000));
 	},
 
 	// Handles the sync action sent from the server.
 	// Expects the following fields: video_time
 	sync: function(data, sock)
 	{
+		vplayer.seekTo(data.video_time);
+		
 		if (data.is_playing)
 		{
 			vplayer.playVideo();
@@ -149,8 +163,6 @@ actions =
 		{
 			vplayer.pauseVideo();
 		}
-
-		vplayer.seekTo(data.video_time);
 	}
 }
 

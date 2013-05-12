@@ -130,6 +130,10 @@ def play(data, sock):
 	else:
 		sock.send(json.dumps({ "action": "error", "reason": "room_not_found", "reason_msg": "Can't play video on an invalid room." }))
 
+	if room["is_playing"]:
+		# Ignore play action if room is playing already.
+		return
+
 	print "Playing room %s" % data["room_id"]
 
 	room["is_playing"] = True
@@ -149,10 +153,13 @@ def pause(data, sock):
 	else:
 		sock.send(json.dumps({ "action": "error", "reason": "room_not_found", "reason_msg": "Can't pause video on an invalid room." }))
 
-	print "Pausing room %s" % data["room_id"]
-
 	if room["is_playing"]:
 		room["current_pos"] = int(time.time()) - room["start_time"] + room["current_pos"]
+	else:
+		# Ignore pause action if room is paused already.
+		return
+
+	print "Pausing room %s" % data["room_id"]
 
 	room["is_playing"] = False
 	__sync_all_clients__(room)

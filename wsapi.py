@@ -173,7 +173,8 @@ def websocket_api(sock):
 	while True:
 		msg = sock.receive()
 		if msg == None:
-			sock.close()
+			[rooms[x]["users"].remove(sock) for x in rooms if sock in rooms[x]["users"]]
+			break
 
 		data = None
 		action = None
@@ -181,9 +182,11 @@ def websocket_api(sock):
 			data = json.loads(msg)
 			action = data["action"]
 		except ValueError:
+			[rooms[x]["users"].remove(sock) for x in rooms if sock in rooms[x]["users"]]
 			break # Kill the connection if the JSON isn't valid.
 
 		if "room_id" not in data:
+			[rooms[x]["users"].remove(sock) for x in rooms if sock in rooms[x]["users"]]
 			break # We need a room ID.
 
 		# Try find an action that matches the specified action.

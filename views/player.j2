@@ -2,7 +2,9 @@
 
 {% block js_head %}
 {{ super() }}
-<script type="text/javascript" src="//cdn.sublimevideo.net/js/xj8gmt4v.js"></script>   
+<script src="https://www.youtube.com/iframe_api"></script>
+<!-- <link href="/static/css/video-js.css" rel="stylesheet">
+<script src="/static/js/video.js"></script> -->
 {% endblock %}
 
 
@@ -12,51 +14,11 @@
 <script type="text/javascript">
 room_id = "{{ room_id }}"
 
-actions = 
-{
-	error: function(data, sock)
-	{
-		console.log(JSON.stringify(data));
-		alert(data.reason_msg);
-	},
 
-	// Handles the init action sent from the server.
-	// Expects the following fields in data: video_id
-	// Doesn't return anything.
-	setvideo: function(data, sock)
-	{
-		$("#player-div").html('<video id="player" class="sublime" width="640" height="360" data-uid="" data-youtube-id="' + data.video_id + '" preload="none"></video>');
-		sublime.load();
-		sublime.ready(function()
-		{
-			var player = sublime.player("player");
-			player.play();
+/////////////////////
+// WEBSOCKET STUFF //
+/////////////////////
 
-			player.on({
-				metadata: function(p)
-				{
-					console.log("works")
-					sock.send(JSON.stringify({ action: "sync", room_id: room_id }));
-					// Send sync ten seconds later to ensure that we're truly synced-up.
-					setTimeout(function()
-					{
-						sock.send(JSON.stringify({ action: "sync", room_id: room_id }));
-					}, (10*1000));
-				}
-			});
-		});
-	},
-
-	// Handles the sync action sent from the server.
-	// Expects the following fields: video_time
-	sync: function(data, sock)
-	{
-		sublime.player("player").seekTo(data.video_time);
-	}
-}
-
-
-// Websocket stuff
 $(document).ready(function()
 {
 	if (!window.WebSocket)
@@ -128,6 +90,70 @@ $(document).ready(function()
 	});
 });
 
+
+
+////////////////////////
+// VIDEO PLAYER STUFF //
+////////////////////////
+
+
+actions = 
+{
+	error: function(data, sock)
+	{
+		console.log(JSON.stringify(data));
+		alert(data.reason_msg);
+	},
+
+	// Handles the init action sent from the server.
+	// Expects the following fields in data: video_id
+	// Doesn't return anything.
+	setvideo: function(data, sock)
+	{
+		vplayer = new YT.Player("player", {
+			width: "640",
+			height: "380",
+			videoId: data.video_id,
+			events: {
+				"onStateChange": function(event)
+				{
+					if (event.data == YT.PlayerState.PLAYING)
+					{
+						ws.send(JSON.stringify({ action: "play", room_id: room_id }));
+					}
+					else if (event.data == YT.PlayerState.PAUSED)
+					{
+						ws.send(JSON.stringify({ action: "pause", room_id: room_id }));
+					}
+				}
+			}
+		});
+
+		ws.send(JSON.stringify({ action: "sync", room_id: room_id }));
+		// Send sync again ten seconds later to ensure that we're truly synced-up.
+		setTimeout(function()
+		{
+			ws.send(JSON.stringify({ action: "sync", room_id: room_id }));
+		}, (10*1000));
+	},
+
+	// Handles the sync action sent from the server.
+	// Expects the following fields: video_time
+	sync: function(data, sock)
+	{
+		if (data.is_playing)
+		{
+			vplayer.playVideo();
+		}
+		else
+		{
+			vplayer.pauseVideo();
+		}
+
+		vplayer.seekTo(data.video_time);
+	}
+}
+
 </script>
 
 {% endblock %}
@@ -136,7 +162,9 @@ $(document).ready(function()
 
 {% block content %}
 
-<div id="player-div"></div>
+<div id="player">
+	
+</div>
 
 {% endblock %}
 

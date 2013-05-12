@@ -27,9 +27,9 @@ import json
 import time
 
 # Calculating Video Time in Rooms:
-# Calculating the current time on a video in rooms is done using two values: start_time and start_pos.
+# Calculating the current time on a video in rooms is done using two values: start_time and current_pos.
 # start_time tracks the last time play was clicked.
-# start_pos tracks what the current time was the last time the video was paused.
+# current_pos tracks what the current time was the last time the video was paused.
 
 rooms = {
 	
@@ -50,8 +50,9 @@ def init(data, sock):
 			"users": [ sock ],
 			"video_id": "J5bhT4-9M0o",
 			"video_service": "YouTube",
+			"is_playing": False,
 			"start_time": 0,
-			"start_pos": 0,
+			"current_pos": 0,
 		}
 		rooms[data["room_id"]] = room
 
@@ -68,6 +69,40 @@ def init(data, sock):
 	}))
 
 
+def __sync_all_clients__(room):
+	"""
+	Sends a sync to all clients in the given room.
+	"""
+	[__sync_client__(sock, room) for sock in room["users"]]
+
+
+def __sync_client__(sock, room):
+	"""
+	Sends a sync action for the given room to the given socket.
+	"""
+
+	video_time = 0
+	# If start_time is 0, then we need to start the video by setting the time to the current system time.
+	if room["start_time"] == 0:
+		room["start_time"] = int(time.time())
+
+	# Otherwise, we need to calculate what time the video is currently at.
+	elif room["is_playing"]:
+		# It's simply current time - start time + start position. <3
+		video_time = int(time.time()) - room["start_time"] + room["current_pos"]
+
+	else:
+		video_time = room["current_pos"]
+
+
+	# Send the sync action to set the client's time.
+	sock.send(json.dumps({
+		"action": "sync",
+		"video_time": video_time, # The current time on the video in seconds since the beginning of the video.
+		"is_playing": room["is_playing"],
+	}))
+
+
 def sync(data, sock):
 	"""
 	Action sent by the server to tell the client what time the video is at.
@@ -80,22 +115,47 @@ def sync(data, sock):
 	else:
 		sock.send(json.dumps({ "action": "error", "reason": "room_not_found", "reason_msg": "Can't sync video on an invalid room." }))
 
-	video_time = 0
-	# If start_time is 0, then we need to start the video by setting the time to the current system time.
-	if room["start_time"] == 0:
-		room["start_time"] = int(time.time())
+	__sync_client__(sock, room)
 
-	# Otherwise, we need to calculate what time the video is currently at.
+
+def play(data, sock):
+	"""
+	Plays the video. Duh...
+	All this really does is update start_time and set is_playing to True
+	"""
+
+	room = None
+	if data["room_id"] in rooms:
+		room = rooms[data["room_id"]]
 	else:
-		# It's simply current time - start time + start position. <3
-		video_time = int(time.time()) - room["start_time"] + room["start_pos"]
+		sock.send(json.dumps({ "action": "error", "reason": "room_not_found", "reason_msg": "Can't play video on an invalid room." }))
+
+	print "Playing room %s" % data["room_id"]
+
+	room["is_playing"] = True
+	room["start_time"] = int(time.time())
+	__sync_all_clients__(room)
 
 
-	# Send the sync action to set the client's time.
-	sock.send(json.dumps({
-		"action": "sync",
-		"video_time": video_time # The current time on the video in seconds since the beginning of the video.
-	}))
+def pause(data, sock):
+	"""
+	Pauses the video. Duh...
+	All this does is update current_pos and set is_playing to False
+	"""
+
+	room = None
+	if data["room_id"] in rooms:
+		room = rooms[data["room_id"]]
+	else:
+		sock.send(json.dumps({ "action": "error", "reason": "room_not_found", "reason_msg": "Can't pause video on an invalid room." }))
+
+	print "Pausing room %s" % data["room_id"]
+
+	if room["is_playing"]:
+		room["current_pos"] = int(time.time()) - room["start_time"] + room["current_pos"]
+
+	room["is_playing"] = False
+	__sync_all_clients__(room)
 
 
 @route("/wsapi", apply=[websocket])
@@ -136,4 +196,6 @@ def websocket_api(sock):
 actions = {
 	"init": init,
 	"sync": sync,
+	"play": play,
+	"pause": pause,
 }

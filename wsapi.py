@@ -36,6 +36,51 @@ rooms = {
 }
 
 
+def __sync_client__(sock, room):
+	"""
+	Sends a sync action for the given room to the given socket.
+	"""
+
+	video_time = 0
+	# If start_time is 0, then we need to start the video by setting the time to the current system time.
+	if room["start_time"] == 0:
+		room["start_time"] = int(time.time())
+
+	# Otherwise, we need to calculate what time the video is currently at.
+	elif room["is_playing"]:
+		# It's simply current time - start time + start position. <3
+		video_time = int(time.time()) - room["start_time"] + room["current_pos"]
+
+	else:
+		video_time = room["current_pos"]
+
+
+	# Send the sync action to set the client's time.
+	sock.send(json.dumps({
+		"action": "sync",
+		"video_time": video_time, # The current time on the video in seconds since the beginning of the video.
+		"is_playing": room["is_playing"],
+	}))
+
+
+def __sync_all_clients__(room):
+	"""
+	Sends a sync to all clients in the given room.
+	"""
+	[__sync_client__(sock, room) for sock in room["users"]]
+
+
+def __set_client_video__(sock, room):
+	"""
+	Sends a setvideo action for the given room to the given socket.
+	"""
+	sock.send(json.dumps({
+		"action": "setvideo",
+		"video_service": room["video_service"], # The service that the video is playing from. Only YouTube is supported currently.
+		"video_id": room["video_id"], # The ID of the video that's playing. Currently just a test.
+	}))
+
+
 def init(data, sock):
 	"""
 	Action sent by the client when the user joins a room.
@@ -62,45 +107,7 @@ def init(data, sock):
 
 	
 	# Send setvideo to change the video to the correct video.
-	sock.send(json.dumps({
-		"action": "setvideo",
-		"video_service": room["video_service"], # The service that the video is playing from. Only YouTube is supported currently.
-		"video_id": room["video_id"], # The ID of the video that's playing. Currently just a test.
-	}))
-
-
-def __sync_all_clients__(room):
-	"""
-	Sends a sync to all clients in the given room.
-	"""
-	[__sync_client__(sock, room) for sock in room["users"]]
-
-
-def __sync_client__(sock, room):
-	"""
-	Sends a sync action for the given room to the given socket.
-	"""
-
-	video_time = 0
-	# If start_time is 0, then we need to start the video by setting the time to the current system time.
-	if room["start_time"] == 0:
-		room["start_time"] = int(time.time())
-
-	# Otherwise, we need to calculate what time the video is currently at.
-	elif room["is_playing"]:
-		# It's simply current time - start time + start position. <3
-		video_time = int(time.time()) - room["start_time"] + room["current_pos"]
-
-	else:
-		video_time = room["current_pos"]
-
-
-	# Send the sync action to set the client's time.
-	sock.send(json.dumps({
-		"action": "sync",
-		"video_time": video_time, # The current time on the video in seconds since the beginning of the video.
-		"is_playing": room["is_playing"],
-	}))
+	__set_client_video__(sock, room)
 
 
 def sync(data, sock):
@@ -138,7 +145,7 @@ def play(data, sock):
 	print "Playing room %s" % data["room_id"]
 
 	room["is_playing"] = True
-	room["current_pos"] = data["time"]
+	room["current_pos"] = int(data["time"])
 	room["start_time"] = int(time.time())
 	__sync_all_clients__(room)
 
@@ -165,6 +172,26 @@ def pause(data, sock):
 
 	room["is_playing"] = False
 	__sync_all_clients__(room)
+
+
+def change_video(data, sock):
+	"""
+	Changes the currently playing video.
+	Expects the following information: video_id
+	"""
+
+	room = None
+	if data["room_id"] in rooms:
+		room = rooms[data["room_id"]]
+	else:
+		sock.send(json.dumps({ "action": "error", "reason": "room_not_found", "reason_msg": "Can't pause video on an invalid room." }))
+
+	room["video_service"] = "YouTube" #data["video_service"]
+	room["video_id"] = data["video_id"]
+	room["current_pos"] = 0
+	room["start_time"] = int(time.time())
+	room["is_playing"] = False
+	[__set_client_video__(sock, room) for sock in room["users"]]
 
 
 @route("/wsapi", apply=[websocket])
@@ -210,4 +237,5 @@ actions = {
 	"sync": sync,
 	"play": play,
 	"pause": pause,
+	"changevideo": change_video,
 }

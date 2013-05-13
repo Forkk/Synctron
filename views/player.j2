@@ -29,7 +29,7 @@ function sendAction(data)
 	ws.send(msg);
 }
 
-$(document).ready(function()
+function initWebSocket()
 {
 	if (!window.WebSocket)
 	{
@@ -43,15 +43,11 @@ $(document).ready(function()
 		}
 	}
 
-
 	ws = new WebSocket('ws://127.0.0.1:8000/wsapi');
 
 	ws.onopen = function(evt)
 	{
-		sendAction({
-			action: "init",
-			room_id: room_id,
-		});
+		
 	}
 
 	ws.onmessage = function(evt)
@@ -91,14 +87,65 @@ $(document).ready(function()
 	{
 		console.log("WebSocket closed.");
 	}
-});
+}
+
+function onYouTubeIframeAPIReady()
+{
+	// Set up UI.
+	$("#videoform").submit(function()
+	{
+		var videoId = $("input#video_id").val();
+		console.log("Changing video to " + videoId);
+		sendAction({ action: "changevideo", room_id: room_id, video_id: videoId });
+		return false;
+	});
+
+
+	// Set up player
+	var lastState = -2;
+	vplayer = new YT.Player("player", {
+		width: "640",
+		height: "380",
+		videoId: "",
+		events: {
+			onStateChange: function(event)
+			{
+				if (event.data == YT.PlayerState.PLAYING && lastState != YT.PlayerState.PLAYING)
+				{
+					console.log("Sending play action...");
+					sendAction({ action: "play", room_id: room_id, time: vplayer.getCurrentTime() });
+				}
+				else if (event.data == YT.PlayerState.PAUSED && lastState != YT.PlayerState.PAUSED)
+				{
+					console.log("Sending pause action... ");
+					sendAction({ action: "pause", room_id: room_id });
+				}
+
+				// When we finish buffering, we should sync.
+				if (event.data != YT.PlayerState.BUFFERING && lastState == YT.PlayerState.BUFFERING)
+				{
+					console.log("Video stopped buffering. Requesting sync...");
+					sendAction({ action: "sync", room_id: room_id });
+				}
+
+				lastState = event.data;
+			},
+
+			onReady: function(event)
+			{
+				console.log("Requesting init...");
+				sendAction({ action: "init", room_id: room_id });
+			},
+		}
+	});
+
+	initWebSocket();
+};
 
 
 ////////////////////////
 // VIDEO PLAYER STUFF //
 ////////////////////////
-
-var ignorePlayPause = false;
 
 actions = 
 {
@@ -113,36 +160,16 @@ actions =
 	// Doesn't return anything.
 	setvideo: function(data, sock)
 	{
-		var lastState = -2;
+		vplayer.loadVideoById(data.video_id);
+		console.log("Requesting sync...");
+		sendAction({ action: "sync", room_id: room_id });
 
-		vplayer = new YT.Player("player", {
-			width: "640",
-			height: "380",
-			videoId: data.video_id,
-			events: {
-				onStateChange: function(event)
-				{
-					if (event.data == YT.PlayerState.PLAYING && lastState != YT.PlayerState.PLAYING)
-					{
-						console.log("Sending play action...");
-						sendAction({ action: "play", room_id: room_id, time: vplayer.getCurrentTime() });
-					}
-					else if (event.data == YT.PlayerState.PAUSED && lastState != YT.PlayerState.PAUSED)
-					{
-						console.log("Sending pause action... ");
-						sendAction({ action: "pause", room_id: room_id });
-					}
-
-					lastState = event.data;
-				},
-
-				onReady: function(event)
-				{
-					console.log("Requesting sync...");
-					sendAction({ action: "sync", room_id: room_id });
-				},
-			}
-		});
+		// Request sync again in a bit to make sure the video is properly synchronized.
+		setTimeout(function()
+		{
+			console.log("Requesting sync...");
+			sendAction({ action: "sync", room_id: room_id });
+		}, (1*1000));
 	},
 
 	// Handles the sync action sent from the server.
@@ -173,6 +200,11 @@ actions =
 <div id="player">
 	
 </div>
+
+<form name="videoform" id="videoform" action="javascript:void(0);">
+	<input type="text" name="video_id" id="video_id" />
+	<button type="submit" id="submit" class="btn">Change Video</button>
+</form>
 
 {% endblock %}
 

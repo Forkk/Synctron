@@ -18,11 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from bottle import route
-
-from bottle.ext.websocket import GeventWebSocketServer
-from bottle.ext.websocket import websocket
-
 import json
 import time
 
@@ -194,8 +189,7 @@ def change_video(data, sock):
 	[__set_client_video__(sock, room) for sock in room["users"]]
 
 
-@route("/wsapi", apply=[websocket])
-def websocket_api(sock):
+def handle_websock(sock):
 	"""
 	The main handler for the websocket API.
 

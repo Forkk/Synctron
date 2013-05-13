@@ -18,7 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from flask import Flask
+from flask import render_template
+
+from synchrotron import app
 
 import json
 
@@ -28,21 +30,18 @@ import wsapi
 from bottle import jinja2_view as view, jinja2_template as template
 
 
-@route("/")
+@app.route("/")
 def home_page():
 	return "Move along! Nothing to see here!"
 
 
-@route("/room/<room_id>")
+@app.route("/room/<room_id>")
 def room_page(room_id):
-	return template("player.j2", room_id = room_id)
+	return render_template("player.j2", room_id = room_id)
 
 
 # For static files.
-@route("/static/<path:path>")
-def static(path):
-	print path
-	return static_file(path, root="./static")
-
-if __name__ == "__main__":
-	run(host="localhost", port = 8000, debug = True, server=GeventWebSocketServer)
+# @app.route("/static/<path:path>")
+# def static(path):
+# 	print path
+# 	return static_file(path, root="./static")

@@ -20,29 +20,14 @@
 
 from flask import Flask
 
-import json
+app = Flask(__name__)
 
+def app_func(env, start_response):
+	path = env["PATH_INFO"]
+	if path == "/wsapi":
+		wsapi.handle_websock(env["wsgi.websocket"])
+	else:
+		return app(env, start_response)
+
+import views
 import wsapi
-
-# JINJA NINJAAAAAAA
-from bottle import jinja2_view as view, jinja2_template as template
-
-
-@route("/")
-def home_page():
-	return "Move along! Nothing to see here!"
-
-
-@route("/room/<room_id>")
-def room_page(room_id):
-	return template("player.j2", room_id = room_id)
-
-
-# For static files.
-@route("/static/<path:path>")
-def static(path):
-	print path
-	return static_file(path, root="./static")
-
-if __name__ == "__main__":
-	run(host="localhost", port = 8000, debug = True, server=GeventWebSocketServer)

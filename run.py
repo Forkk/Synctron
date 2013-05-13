@@ -18,31 +18,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from flask import Flask
+from gevent.pywsgi import WSGIServer
+from geventwebsocket.handler import WebSocketHandler
 
-import json
+from synchrotron import app_func, app
 
-import wsapi
-
-# JINJA NINJAAAAAAA
-from bottle import jinja2_view as view, jinja2_template as template
-
-
-@route("/")
-def home_page():
-	return "Move along! Nothing to see here!"
-
-
-@route("/room/<room_id>")
-def room_page(room_id):
-	return template("player.j2", room_id = room_id)
-
-
-# For static files.
-@route("/static/<path:path>")
-def static(path):
-	print path
-	return static_file(path, root="./static")
-
-if __name__ == "__main__":
-	run(host="localhost", port = 8000, debug = True, server=GeventWebSocketServer)
+if __name__ == '__main__':
+	http_server = WSGIServer(('localhost', 8000), app_func, handler_class=WebSocketHandler)
+	http_server.serve_forever()

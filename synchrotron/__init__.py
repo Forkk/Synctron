@@ -21,13 +21,7 @@
 from flask import Flask
 
 app = Flask(__name__)
+app.config.from_object("synchrotron.default_settings")
+app.config.from_envvar("SYNC_SETTINGS")
 
-def app_func(env, start_response):
-	path = env["PATH_INFO"]
-	if path == "/wsapi":
-		wsapi.handle_websock(env["wsgi.websocket"])
-	else:
-		return app(env, start_response)
-
-import views
-import wsapi
+import synchrotron.views

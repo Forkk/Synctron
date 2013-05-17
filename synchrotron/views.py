@@ -26,9 +26,6 @@ import json
 
 import wsapi
 
-# JINJA NINJAAAAAAA
-from bottle import jinja2_view as view, jinja2_template as template
-
 
 @app.route("/")
 def home_page():
@@ -37,11 +34,4 @@ def home_page():
 
 @app.route("/room/<room_id>")
 def room_page(room_id):
-	return render_template("player.j2", room_id = room_id)
-
-
-# For static files.
-# @app.route("/static/<path:path>")
-# def static(path):
-# 	print path
-# 	return static_file(path, root="./static")
+	return render_template("player.j2", room_id = room_id, wsapi_url = app.config.get("WSAPI_URL"))

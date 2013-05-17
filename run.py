@@ -18,11 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from gevent.pywsgi import WSGIServer
-from geventwebsocket.handler import WebSocketHandler
+from synchrotron import app
 
-from synchrotron import app_func, app
-
-if __name__ == '__main__':
-	http_server = WSGIServer(('localhost', 8000), app_func, handler_class=WebSocketHandler)
-	http_server.serve_forever()
+if __name__ == "__main__":
+	app.run(host = "localhost", port = 8000, debug = True)

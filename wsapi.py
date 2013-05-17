@@ -18,6 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from bottle import route, run, static_file
+from bottle.ext.websocket import GeventWebSocketServer
+from bottle.ext.websocket import websocket
+
 import json
 import time
 
@@ -188,7 +192,16 @@ def change_video(data, sock):
 	room["is_playing"] = False
 	[__set_client_video__(sock, room) for sock in room["users"]]
 
+actions = {
+	"init": init,
+	"sync": sync,
+	"play": play,
+	"pause": pause,
+	"changevideo": change_video,
+}
 
+
+@route("/", apply=[websocket])
 def handle_websock(sock):
 	"""
 	The main handler for the websocket API.
@@ -225,11 +238,5 @@ def handle_websock(sock):
 		else:
 			actions[action](data, sock)
 
-
-actions = {
-	"init": init,
-	"sync": sync,
-	"play": play,
-	"pause": pause,
-	"changevideo": change_video,
-}
+if __name__ == "__main__":
+	run(host="localhost", port = 8889, server=GeventWebSocketServer)

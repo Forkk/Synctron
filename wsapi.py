@@ -151,17 +151,21 @@ class UserWebSocket(WebSocket):
 		self.room["is_playing"] = False
 		__sync_all_clients__(self.room)
 
+
 	def action_changevideo(self, data):
 		"""
 		Changes the currently playing video.
 		Expects the following information: video_id
 		"""
+
+		print "Changing video in room %s to %s" % (self.room["room_id"], data["video_id"])
+
 		self.room["video_service"] = "YouTube" #data["video_service"]
 		self.room["video_id"] = data["video_id"]
 		self.room["current_pos"] = 0
 		self.room["start_time"] = int(time.time())
 		self.room["is_playing"] = False
-		[sock.send_setvideo for sock in self.room["users"]]
+		[sock.send_setvideo() for sock in self.room["users"]]
 
 
 

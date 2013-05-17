@@ -123,10 +123,11 @@ class UserWebSocket(WebSocket):
 		All this really does is update start_time, set current_pos to the given time, and set is_playing to True
 		"""
 
-		# This breaks seeking...
-		# if self.room["is_playing"]:
-		# 	# Ignore play action if room is playing already.
-		# 	return
+		if self.room["is_playing"] and "time" not in data:
+			# If room is already playing, sync the user who tried to play it.
+			# Unless they're seeking.
+			self.send_sync()
+			return
 
 		print "Playing room %s" % self.room["room_id"]
 
@@ -146,11 +147,12 @@ class UserWebSocket(WebSocket):
 		All this does is update current_pos and set is_playing to False
 		"""
 
-		print "Pausing room %s" % self.room["room_id"]
-
 		if not self.room["is_playing"]:
-			# Ignore pause action if room is paused already.
+			# If room is already paused, sync the user who tried to pause it.
+			self.send_sync()
 			return
+
+		print "Pausing room %s" % self.room["room_id"]
 
 		self.room["current_pos"] = self.calc_video_time()
 		self.room["is_playing"] = False

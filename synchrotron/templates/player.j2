@@ -1,10 +1,40 @@
 {% extends "base.j2" %}
 
+{% block css_head %}
+{{ super() }}
+
+<style>
+
+.progress .bar-loadedvideo
+{
+	background-color: #7ed97e;
+	background-image: -moz-linear-gradient(top, #82e482, #77c977);
+	background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#82e482), to(#77c977));
+	background-image: -webkit-linear-gradient(top, #82e482, #77c977);
+	background-image: -o-linear-gradient(top, #82e482, #77c977);
+	background-image: linear-gradient(to bottom, #82e482, #77c977);
+	background-repeat: repeat-x;
+	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff62c462', endColorstr='#ff57a957', GradientType=0);
+}
+
+.shrink
+{
+	width: 1px;
+	white-space: nowrap;
+}
+
+.ctrlpadding
+{
+	padding-left: 4px;
+	padding-right: 4px;
+}
+
+</style>
+{% endblock %}
+
 {% block js_head %}
 {{ super() }}
 <script src="https://www.youtube.com/iframe_api"></script>
-<!-- <link href="/static/css/video-js.css" rel="stylesheet">
-<script src="/static/js/video.js"></script> -->
 {% endblock %}
 
 
@@ -96,7 +126,7 @@ function onYouTubeIframeAPIReady()
 	{
 		var videoId = $("input#video_id").val();
 		console.log("Changing video to " + videoId);
-		sendAction({ action: "changevideo", room_id: room_id, video_id: videoId });
+		sendAction({ action: "changevideo", video_id: videoId });
 		return false;
 	});
 
@@ -107,25 +137,26 @@ function onYouTubeIframeAPIReady()
 		width: "640",
 		height: "380",
 		videoId: "",
+		playerVars: { controls: 0 },
 		events: {
 			onStateChange: function(event)
 			{
-				if (event.data == YT.PlayerState.PLAYING && lastState != YT.PlayerState.PLAYING)
-				{
-					console.log("Sending play action...");
-					sendAction({ action: "play", room_id: room_id, time: vplayer.getCurrentTime() });
-				}
-				else if (event.data == YT.PlayerState.PAUSED && lastState != YT.PlayerState.PAUSED)
-				{
-					console.log("Sending pause action... ");
-					sendAction({ action: "pause", room_id: room_id });
-				}
+				// if (event.data == YT.PlayerState.PLAYING && lastState != YT.PlayerState.PLAYING)
+				// {
+				// 	console.log("Sending play action...");
+				// 	sendAction({ action: "play", time: vplayer.getCurrentTime() });
+				// }
+				// else if (event.data == YT.PlayerState.PAUSED && lastState != YT.PlayerState.PAUSED)
+				// {
+				// 	console.log("Sending pause action... ");
+				// 	sendAction({ action: "pause", });
+				// }
 
 				// When we finish buffering, we should sync.
 				if (event.data != YT.PlayerState.BUFFERING && lastState == YT.PlayerState.BUFFERING)
 				{
 					console.log("Video stopped buffering. Requesting sync...");
-					sendAction({ action: "sync", room_id: room_id });
+					sendAction({ action: "sync", });
 				}
 
 				lastState = event.data;
@@ -135,12 +166,96 @@ function onYouTubeIframeAPIReady()
 			{
 				console.log("Requesting init...");
 				sendAction({ action: "init", room_id: room_id });
+
+				// Update player controls
+				setInterval(updatePlayerControls, 100);
 			},
+		}
+	});
+
+	function updatePlayerControls()
+	{
+		var playedPercent = ((vplayer.getCurrentTime() / vplayer.getDuration()) * 100);
+		var loadedPercent = (vplayer.getVideoLoadedFraction() * 100) - (playedPercent + 0.1); // Odd hacky bugs. YAY!
+
+		$("#seekbar-played").css("width", playedPercent + "%");
+		$("#seekbar-loaded").css("width", loadedPercent + "%");
+
+		var currentTimeStr = getTimeStr(Math.floor(vplayer.getCurrentTime()), vplayer.getDuration() > 60 * 60);
+		var totalTimeStr = getTimeStr(Math.floor(vplayer.getDuration()));
+
+		$("#time-display").text(currentTimeStr + " / " + totalTimeStr);
+	}
+
+	function calcTimeAtSeekbarPosition(xpos)
+	{
+		// Calculate the fraction of the bar at the current mouse position.
+		var fraction = xpos / $("#seekbar").width();
+
+		// Calculate the time in the video for that fraction.
+		return vplayer.getDuration() * fraction;
+	}
+
+	function getTimeStr(timeSecs, forceHrs)
+	{
+		if (typeof forceHrs === "undefined")
+			forceHrs = false;
+
+		var hours = Math.floor(timeSecs / 3600);
+		var minutes = Math.floor((timeSecs - (hours * 3600)) / 60);
+		var seconds = timeSecs - (hours * 3600) - (minutes * 60);
+
+		if (hours < 10) {hours = "0" + hours;}
+		if (minutes < 10) {minutes = "0" + minutes;}
+		if (seconds < 10) {seconds = "0" + seconds;}
+		var time = "";
+		if (hours > 0 || forceHrs) time += hours + ":";
+		time += minutes + ":" + seconds;
+		return time;
+	}
+
+	$("#seekbar").mousemove(function(evt)
+	{
+		var parentOffset = $("#seekbar").parent().offset();
+		var newTitle = getTimeStr(Math.floor(calcTimeAtSeekbarPosition(evt.pageX - parentOffset.left)));
+		$("#seekbar").tooltip('hide').attr('data-original-title', newTitle).tooltip('fixTitle').tooltip('show');
+	});
+
+	$("#seekbar").mouseleave(function(evt)
+	{
+		$("#seekbar").tooltip("hide");
+	});
+
+
+	$("#seekbar").click(function(evt)
+	{
+		var parentOffset = $("#seekbar").parent().offset(); 
+		sendAction({ action: "play", time: calcTimeAtSeekbarPosition(evt.pageX - parentOffset.left) });
+	});
+
+	$("#seekbar").tooltip({
+		animation: false,
+		placement: "bottom",
+		title: "Test",
+		trigger: "manual",
+	});
+
+	$("#playbtn").click(function(evt)
+	{
+		if (vplayer.getPlayerState() == YT.PlayerState.PLAYING)
+		{
+			sendAction({ action: "pause" });
+		}
+		else
+		{
+			sendAction({ action: "play" });
 		}
 	});
 
 	initWebSocket();
 };
+
+
 
 
 ////////////////////////
@@ -162,13 +277,13 @@ actions =
 	{
 		vplayer.loadVideoById(data.video_id);
 		console.log("Requesting sync...");
-		sendAction({ action: "sync", room_id: room_id });
+		sendAction({ action: "sync", });
 
 		// Request sync again in a bit to make sure the video is properly synchronized.
 		setTimeout(function()
 		{
 			console.log("Requesting sync...");
-			sendAction({ action: "sync", room_id: room_id });
+			sendAction({ action: "sync", });
 		}, (1*1000));
 	},
 
@@ -197,8 +312,23 @@ actions =
 
 {% block content %}
 
-<div id="player">
-	
+<div id="player-div">
+	<table>
+		<tr>
+			<td colspan="3"><div id="player"></div></td>
+		</tr>
+
+		<tr>
+			<td class="shrink ctrlpadding"><a id="playbtn" class="btn btn-small">Play / Pause</a></td>
+			<td id="time-display" class="shrink ctrlpadding"></td>
+			<td  class="ctrlpadding">
+				<div id="seekbar" class="progress">
+					<div id="seekbar-played" class="bar bar-success"></div>
+					<div id="seekbar-loaded" class="bar bar-loadedvideo"></div>
+				</div>
+			</td>
+		</tr>
+	</table>
 </div>
 
 <form name="videoform" id="videoform" action="javascript:void(0);">

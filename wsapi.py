@@ -18,9 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from bottle import route, run, static_file
-from bottle.ext.websocket import GeventWebSocketServer
-from bottle.ext.websocket import websocket
+from ws4py.websocket import WebSocket
 
 import json
 import time
@@ -35,208 +33,201 @@ rooms = {
 }
 
 
-def __sync_client__(sock, room):
-	"""
-	Sends a sync action for the given room to the given socket.
-	"""
+class UserWebSocket(WebSocket):
+	def opened(self):
+		# Just set up the actions dict.
+		self.room = None
+		self.actions = {
+			"init": self.action_init,
+			"sync": self.action_sync,
+			"play": self.action_play,
+			"pause": self.action_pause,
+			"changevideo": self.action_changevideo,
+		}
 
-	video_time = 0
-	# If start_time is 0, then we need to start the video by setting the time to the current system time.
-	if room["start_time"] == 0:
-		room["start_time"] = int(time.time())
+	def received_message(self, message):
+		data = None
+		action = None
 
-	# Otherwise, we need to calculate what time the video is currently at.
-	elif room["is_playing"]:
-		# It's simply current time - start time + start position. <3
-		video_time = int(time.time()) - room["start_time"] + room["current_pos"]
+		if not message.is_text:
+			self.close(1008, "All messages must be valid JSON.")
+			return
 
-	else:
-		video_time = room["current_pos"]
+		try:
+			data = json.loads(message.data)
+			action = data["action"]
+		except ValueError:
+			self.close(1008, "All messages must be valid JSON.")
+			return
+
+		# Try find an action that matches the specified action.
+		if not action in self.actions:
+			sock.send(json.dumps({ "action": "error", "reason": "invalid_action", "reason_msg": "Invalid action" }))
+		else:
+			self.actions[action](data)
+
+	def closed(self, code, reason=None):
+		if self.room:
+			self.room["users"].remove(self)
 
 
-	# Send the sync action to set the client's time.
-	sock.send(json.dumps({
-		"action": "sync",
-		"video_time": video_time, # The current time on the video in seconds since the beginning of the video.
-		"is_playing": room["is_playing"],
-	}))
+
+	####################
+	# RECEIVED ACTIONS #
+	####################
+
+	def action_init(self, data):
+		"""
+		Action sent by the client when the user joins a room.
+		This function expects the data to contain the following information: pass
+		Responds with information about what's currently going on such as the currently playing video's ID, time, playlist info, etc.
+		"""
+
+		if "room_id" not in data:
+			self.close(1008, "init action requires a room ID")
+			return
+
+		# If the room specified in data doesn't exist, we need to create it.
+		self.room = None
+		if data["room_id"] not in rooms:
+			rooms[data["room_id"]] = {
+				"room_id": data["room_id"],
+				"users": [ self ],
+				"video_id": "J5bhT4-9M0o",
+				"video_service": "YouTube",
+				"is_playing": False,
+				"start_time": 0,
+				"current_pos": 0,
+			}
+			self.room = rooms[data["room_id"]]
+
+		else:
+			self.room = rooms[data["room_id"]]
+			self.room["users"].append(self)
+		
+		# Send setvideo to change the video to the correct video.
+		self.send_setvideo()
+
+
+	def action_sync(self, data):
+		"""
+		Action sent from the client to request that the server send the client a sync action.
+		"""
+		self.send_sync()
+
+
+	def action_play(self, data):
+		"""
+		Plays the video. Duh...
+		This also is used for seeking. When a seek is done, the client sends a play event and specifies the time that was seeked to.
+		All this really does is update start_time, set current_pos to the given time, and set is_playing to True
+		"""
+
+		if self.room["is_playing"]:
+			# Ignore play action if room is playing already.
+			return
+
+		print "Playing room %s" % self.room["room_id"]
+
+		self.room["is_playing"] = True
+		self.room["current_pos"] = int(data["time"])
+		self.room["start_time"] = int(time.time())
+		__sync_all_clients__(self.room)
+
+
+	def action_pause(self, data):
+		"""
+		Pauses the video. Duh...
+		All this does is update current_pos and set is_playing to False
+		"""
+
+		print "Pausing room %s" % self.room["room_id"]
+
+		if not self.room["is_playing"]:
+			# Ignore pause action if room is paused already.
+			return
+
+		self.room["current_pos"] = self.calc_video_time()
+		self.room["is_playing"] = False
+		__sync_all_clients__(self.room)
+
+	def action_changevideo(self, data):
+		"""
+		Changes the currently playing video.
+		Expects the following information: video_id
+		"""
+		self.room["video_service"] = "YouTube" #data["video_service"]
+		self.room["video_id"] = data["video_id"]
+		self.room["current_pos"] = 0
+		self.room["start_time"] = int(time.time())
+		self.room["is_playing"] = False
+		[sock.send_setvideo for sock in self.room["users"]]
+
+
+
+	###################
+	# SENDING ACTIONS #
+	###################
+
+	def send_sync(self):
+		"""Sends a sync action to the client."""
+		video_time = 0
+		# If start_time is 0, then we need to start the video by setting the time to the current system time.
+		if self.room["start_time"] == 0:
+			self.room["start_time"] = int(time.time())
+
+		# Otherwise, we need to calculate what time the video is currently at.
+		else:
+			video_time = self.calc_video_time()
+
+		# print "Sync. vtime: %i current time: %i start time: %i current position: %i" % \
+		# 	(video_time, time.time(), self.room["start_time"], self.room["current_pos"])
+		# Send the sync action to set the client's time.
+		self.send(json.dumps({
+			"action": "sync",
+			"video_time": video_time, # The current time on the video in seconds since the beginning of the video.
+			"is_playing": self.room["is_playing"],
+		}))
+
+
+	def send_setvideo(self):
+		"""Sends a setvideo action to the client."""
+		self.send(json.dumps({
+			"action": "setvideo",
+			# The service that the video is playing from. Only YouTube is supported currently.
+			"video_service": self.room["video_service"], 
+			# The ID of the video that's playing. Currently just a test.
+			"video_id": self.room["video_id"],
+		}))
+
+
+
+	##################
+	# MISC FUNCTIONS #
+	##################
+
+	def calc_video_time(self):
+		if self.room["is_playing"]:
+			# It's simply current time - start time + start position. <3
+			return int(time.time()) - self.room["start_time"] + self.room["current_pos"]
+
+		# Unless the room is paused. Then we just send the current position.
+		else:
+			return self.room["current_pos"]
 
 
 def __sync_all_clients__(room):
 	"""
 	Sends a sync to all clients in the given room.
 	"""
-	[__sync_client__(sock, room) for sock in room["users"]]
+	[sock.send_sync() for sock in room["users"]]
 
-
-def __set_client_video__(sock, room):
-	"""
-	Sends a setvideo action for the given room to the given socket.
-	"""
-	sock.send(json.dumps({
-		"action": "setvideo",
-		"video_service": room["video_service"], # The service that the video is playing from. Only YouTube is supported currently.
-		"video_id": room["video_id"], # The ID of the video that's playing. Currently just a test.
-	}))
-
-
-def init(data, sock):
-	"""
-	Action sent by the client when the user joins a room.
-	This function expects the data to contain the following information: pass
-	Responds with information about what's currently going on such as the currently playing video's ID, time, playlist info, etc.
-	"""
-
-	# If the room specified in data doesn't exist, we need to create it.
-	room = None
-	if data["room_id"] not in rooms:
-		room = {
-			"users": [ sock ],
-			"video_id": "J5bhT4-9M0o",
-			"video_service": "YouTube",
-			"is_playing": False,
-			"start_time": 0,
-			"current_pos": 0,
-		}
-		rooms[data["room_id"]] = room
-
-	else:
-		room = rooms[data["room_id"]]
-		room["users"].append(sock)
-
-	
-	# Send setvideo to change the video to the correct video.
-	__set_client_video__(sock, room)
-
-
-def sync(data, sock):
-	"""
-	Action sent by the server to tell the client what time the video is at.
-	Sent under various conditions.
-	"""
-
-	room = None
-	if data["room_id"] in rooms:
-		room = rooms[data["room_id"]]
-	else:
-		sock.send(json.dumps({ "action": "error", "reason": "room_not_found", "reason_msg": "Can't sync video on an invalid room." }))
-
-	__sync_client__(sock, room)
-
-
-def play(data, sock):
-	"""
-	Plays the video. Duh...
-	This also is used for seeking. When a seek is done, the client sends a play event and specifies the time that was seeked to.
-	All this really does is update start_time and set is_playing to True
-	"""
-
-	room = None
-	if data["room_id"] in rooms:
-		room = rooms[data["room_id"]]
-	else:
-		sock.send(json.dumps({ "action": "error", "reason": "room_not_found", "reason_msg": "Can't play video on an invalid room." }))
-
-	if room["is_playing"]:
-		# Ignore play action if room is playing already.
-		return
-
-	print "Playing room %s" % data["room_id"]
-
-	room["is_playing"] = True
-	room["current_pos"] = int(data["time"])
-	room["start_time"] = int(time.time())
-	__sync_all_clients__(room)
-
-
-def pause(data, sock):
-	"""
-	Pauses the video. Duh...
-	All this does is update current_pos and set is_playing to False
-	"""
-
-	room = None
-	if data["room_id"] in rooms:
-		room = rooms[data["room_id"]]
-	else:
-		sock.send(json.dumps({ "action": "error", "reason": "room_not_found", "reason_msg": "Can't pause video on an invalid room." }))
-
-	if room["is_playing"]:
-		room["current_pos"] = int(time.time()) - room["start_time"] + room["current_pos"]
-	else:
-		# Ignore pause action if room is paused already.
-		return
-
-	print "Pausing room %s" % data["room_id"]
-
-	room["is_playing"] = False
-	__sync_all_clients__(room)
-
-
-def change_video(data, sock):
-	"""
-	Changes the currently playing video.
-	Expects the following information: video_id
-	"""
-
-	room = None
-	if data["room_id"] in rooms:
-		room = rooms[data["room_id"]]
-	else:
-		sock.send(json.dumps({ "action": "error", "reason": "room_not_found", "reason_msg": "Can't pause video on an invalid room." }))
-
-	room["video_service"] = "YouTube" #data["video_service"]
-	room["video_id"] = data["video_id"]
-	room["current_pos"] = 0
-	room["start_time"] = int(time.time())
-	room["is_playing"] = False
-	[__set_client_video__(sock, room) for sock in room["users"]]
-
-actions = {
-	"init": init,
-	"sync": sync,
-	"play": play,
-	"pause": pause,
-	"changevideo": change_video,
-}
-
-
-@route("/", apply=[websocket])
-def handle_websock(sock):
-	"""
-	The main handler for the websocket API.
-
-	This receives messages from websockets and parses them as JSON. It then checks the "action" field in the JSON and looks for a corresponding field in the "actions" dict. When it finds one, it will call the function associated with it.
-
-	If the message received is not valid JSON or if it doesn't contain an action field, the connection will be terminated.
-	If the action specified in the received message is not a valid action, an error will be returned.
-
-	When an action is called, whatever it returns will be passed to json.dumps() and sent to the client unless it is None.
-	"""
-	while True:
-		msg = sock.receive()
-		if msg == None:
-			[rooms[x]["users"].remove(sock) for x in rooms if sock in rooms[x]["users"]]
-			break
-
-		data = None
-		action = None
-		try:
-			data = json.loads(msg)
-			action = data["action"]
-		except ValueError:
-			[rooms[x]["users"].remove(sock) for x in rooms if sock in rooms[x]["users"]]
-			break # Kill the connection if the JSON isn't valid.
-
-		if "room_id" not in data:
-			[rooms[x]["users"].remove(sock) for x in rooms if sock in rooms[x]["users"]]
-			break # We need a room ID.
-
-		# Try find an action that matches the specified action.
-		if not action in actions:
-			sock.send(json.dumps({ "action": "error", "reason": "invalid_action", "reason_msg": "Invalid action" }))
-		else:
-			actions[action](data, sock)
 
 if __name__ == "__main__":
-	run(host="localhost", port = 8889, server=GeventWebSocketServer)
+	from gevent import monkey; monkey.patch_all()
+	from ws4py.server.geventserver import WSGIServer
+	from ws4py.server.wsgiutils import WebSocketWSGIApplication
+
+	print("Running WebSocket server...")
+	server = WSGIServer(('localhost', 8889), WebSocketWSGIApplication(handler_cls=UserWebSocket))
+	server.serve_forever()

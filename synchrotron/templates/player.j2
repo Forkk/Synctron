@@ -173,7 +173,7 @@ function sendPlay()
 
 function sendSeek(time)
 {
-	sendAction({ action: "play", time: time });
+	sendAction({ action: "seek", time: time });
 }
 
 function sendPause()
@@ -274,11 +274,9 @@ function updateState(state)
 			console.log("Sending seek");
 			sendSeek(time_current);
 		}
-		else
-		{
-			console.log("Sending play");
-			sendPlay();
-		}
+		
+		console.log("Sending play");
+		sendPlay();
 	}
 }
 

@@ -23,27 +23,38 @@ from ws4py.websocket import WebSocket
 import json
 import time
 
-# Calculating Video Time in Rooms:
-# Calculating the current time on a video in rooms is done using two values: start_time and current_pos.
-# start_time tracks the last time play was clicked.
-# current_pos tracks what the current time was the last time the video was paused.
+from wsapi.room import Room
 
 rooms = {
 	
 }
 
+# Just a temporary thing for counting users.
+# Used to generate names for users.
+# This will probably go away when we come up with a real username system.
 
 class UserWebSocket(WebSocket):
+	usercount = 0
+
+	#######################
+	# WEBSOCKET FUNCTIONS #
+	#######################
+
 	def opened(self):
-		# Just set up the actions dict.
+		# Set up the actions dict.
 		self.room = None
 		self.actions = {
 			"init": self.action_init,
 			"sync": self.action_sync,
 			"play": self.action_play,
 			"pause": self.action_pause,
+			"seek": self.action_seek,
 			"changevideo": self.action_changevideo,
 		}
+
+		# Generate a username for the user.
+		self.username = "User%i" % UserWebSocket.usercount
+		UserWebSocket.usercount += 1
 
 	def received_message(self, message):
 		data = None
@@ -68,8 +79,7 @@ class UserWebSocket(WebSocket):
 
 	def closed(self, code, reason=None):
 		if self.room:
-			self.room["users"].remove(self)
-
+			self.room.remove_user(self)
 
 
 	####################
@@ -87,34 +97,21 @@ class UserWebSocket(WebSocket):
 			self.close(1008, "init action requires a room ID")
 			return
 
-		# If the room specified in data doesn't exist, we need to create it.
-		self.room = None
+		# If the room ID specified in data doesn't exist, we need to create it.
 		if data["room_id"] not in rooms:
-			rooms[data["room_id"]] = {
-				"room_id": data["room_id"],
-				"users": [ self ],
-				"video_id": "J5bhT4-9M0o",
-				"video_service": "YouTube",
-				"is_playing": False,
-				"start_time": 0,
-				"current_pos": 0,
-			}
-			self.room = rooms[data["room_id"]]
+			rooms[data["room_id"]] = Room(data["room_id"])
 
-		else:
-			self.room = rooms[data["room_id"]]
-			self.room["users"].append(self)
-		
-		# Send setvideo to change the video to the correct video.
-		self.send_setvideo()
+		# Set self.room to the room we're joining.
+		self.room = rooms[data["room_id"]]
 
+		# Add the user to the room.
+		self.room.add_user(self)
 
 	def action_sync(self, data):
 		"""
 		Action sent from the client to request that the server send the client a sync action.
 		"""
 		self.send_sync()
-
 
 	def action_play(self, data):
 		"""
@@ -123,23 +120,20 @@ class UserWebSocket(WebSocket):
 		All this really does is update start_time, set current_pos to the given time, and set is_playing to True
 		"""
 
-		if self.room["is_playing"] and "time" not in data:
+		if self.room.is_playing:
 			# If room is already playing, sync the user who tried to play it.
 			# Unless they're seeking.
 			self.send_sync()
 			return
 
-		print "Playing room %s" % self.room["room_id"]
+		self.room.play()
 
-		stime = self.calc_video_time()
-		if "time" in data:
-			stime = int(data["time"])
-		
-		self.room["current_pos"] = stime
-		self.room["start_time"] = int(time.time())
-		self.room["is_playing"] = True
-		__sync_all_clients__(self.room)
+	def action_seek(self, data):
+		"""
+		Seeks the video to the time specified in data.
+		"""
 
+		self.room.seek(data["time"])
 
 	def action_pause(self, data):
 		"""
@@ -147,17 +141,12 @@ class UserWebSocket(WebSocket):
 		All this does is update current_pos and set is_playing to False
 		"""
 
-		if not self.room["is_playing"]:
+		if not self.room.is_playing:
 			# If room is already paused, sync the user who tried to pause it.
 			self.send_sync()
 			return
 
-		print "Pausing room %s" % self.room["room_id"]
-
-		self.room["current_pos"] = self.calc_video_time()
-		self.room["is_playing"] = False
-		__sync_all_clients__(self.room)
-
+		self.room.pause()
 
 	def action_changevideo(self, data):
 		"""
@@ -165,15 +154,7 @@ class UserWebSocket(WebSocket):
 		Expects the following information: video_id
 		"""
 
-		print "Changing video in room %s to %s" % (self.room["room_id"], data["video_id"])
-
-		self.room["video_service"] = "YouTube" #data["video_service"]
-		self.room["video_id"] = data["video_id"]
-		self.room["current_pos"] = 0
-		self.room["start_time"] = int(time.time())
-		self.room["is_playing"] = False
-		[sock.send_setvideo() for sock in self.room["users"]]
-
+		self.room.change_video(data["video_id"])
 
 
 	###################
@@ -182,63 +163,18 @@ class UserWebSocket(WebSocket):
 
 	def send_sync(self):
 		"""Sends a sync action to the client."""
-		video_time = 0
-		# If start_time is 0, then we need to start the video by setting the time to the current system time.
-		if self.room["start_time"] == 0:
-			self.room["start_time"] = int(time.time())
-
-		# Otherwise, we need to calculate what time the video is currently at.
-		else:
-			video_time = self.calc_video_time()
-
-		# print "Sync. vtime: %i current time: %i start time: %i current position: %i" % \
-		# 	(video_time, time.time(), self.room["start_time"], self.room["current_pos"])
-		# Send the sync action to set the client's time.
 		self.send(json.dumps({
 			"action": "sync",
-			"video_time": video_time, # The current time on the video in seconds since the beginning of the video.
-			"is_playing": self.room["is_playing"],
+			"video_time": self.room.current_pos(),
+			"is_playing": self.room.is_playing,
 		}))
-
 
 	def send_setvideo(self):
 		"""Sends a setvideo action to the client."""
 		self.send(json.dumps({
 			"action": "setvideo",
 			# The service that the video is playing from. Only YouTube is supported currently.
-			"video_service": self.room["video_service"], 
+			"video_service": self.room.video_service, 
 			# The ID of the video that's playing. Currently just a test.
-			"video_id": self.room["video_id"],
+			"video_id": self.room.video_id,
 		}))
-
-
-
-	##################
-	# MISC FUNCTIONS #
-	##################
-
-	def calc_video_time(self):
-		if self.room["is_playing"]:
-			# It's simply current time - start time + start position. <3
-			return int(time.time()) - self.room["start_time"] + self.room["current_pos"]
-
-		# Unless the room is paused. Then we just send the current position.
-		else:
-			return self.room["current_pos"]
-
-
-def __sync_all_clients__(room):
-	"""
-	Sends a sync to all clients in the given room.
-	"""
-	[sock.send_sync() for sock in room["users"]]
-
-
-if __name__ == "__main__":
-	from gevent import monkey; monkey.patch_all()
-	from ws4py.server.geventserver import WSGIServer
-	from ws4py.server.wsgiutils import WebSocketWSGIApplication
-
-	print("Running WebSocket server...")
-	server = WSGIServer(('localhost', 8889), WebSocketWSGIApplication(handler_cls=UserWebSocket))
-	server.serve_forever()

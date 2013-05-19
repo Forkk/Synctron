@@ -2,6 +2,16 @@
 
 {% block css_head %}
 {{ super() }}
+
+<style>
+
+.clickable
+{
+	cursor: pointer;
+}
+
+</style>
+
 {% endblock %}
 
 {% block js_head %}
@@ -15,7 +25,6 @@
 
 <script type="text/javascript">
 room_id = "{{ room_id }}"
-
 
 /////////////////////////
 //// WEBSOCKET STUFF ////
@@ -98,7 +107,7 @@ function onYouTubeIframeAPIReady()
 	{
 		var videoId = $("input#video_id").val();
 		console.log("Changing video to " + videoId);
-		sendAction({ action: "changevideo", video_id: videoId });
+		sendAction({ action: "addvideo", video_id: videoId });
 		return false;
 	});
 
@@ -274,7 +283,7 @@ function updateState(state)
 			console.log("Sending seek");
 			sendSeek(time_current);
 		}
-		
+
 		console.log("Sending play");
 		sendPlay();
 	}
@@ -322,7 +331,40 @@ actions =
 	{
 		changePlaying(data.is_playing);
 		changeCurrentTime(data.video_time);
-	}
+	},
+
+	playlistupdate: function (data, sock)
+	{
+		$("#playlist").html("");
+		data.playlist.forEach(function(vid, index)
+		{
+			// There's probably a better way to do this.
+			var itemElement = $("#playlist").append('<li class="media clickable" id="plistclick-' + index + '">\
+				<a id="plistanchor-' + index + '" class="pull-left">\
+				<img class="media-object" src="http://i.ytimg.com/vi/' + vid + '/default.jpg">\
+				</a>\
+				<div id="plist-' + index + '" class="media-body">\
+					<h4 class="media-heading">Loading...</h4>\
+					Loading video info, please wait.\
+				</div></a></li>');
+
+			$.ajax({
+				url: "http://gdata.youtube.com/feeds/api/videos/" + vid + "?v=2&alt=json",
+				dataType: "json",
+				success: function(data)
+				{
+					var title = data.entry.title.$t;
+					$("#plist-" + index).html('<h4 class="media-heading">' + title + '</h4>');
+				},
+			})
+
+			$("#plistclick-" + index).click(function(evt)
+			{
+				console.log("Changing current video to index " + index);
+				sendAction({ action: "changevideo", index: index });
+			});
+		});
+	},
 }
 
 </script>
@@ -336,6 +378,14 @@ actions =
 <div id="player-div">
 	<div id="player"></div>
 </div>
+
+<div class="well">
+	<h3>Playlist</h3>
+	<hr />
+	<ul class="media-list" id="playlist">
+	</ul>
+</div>
+
 
 <form name="videoform" id="videoform" action="javascript:void(0);">
 	<input type="text" name="video_id" id="video_id" />

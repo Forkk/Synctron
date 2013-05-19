@@ -39,8 +39,11 @@ class Room:
 		# List of users in the room.
 		self.users = []
 
-		# The ID of the video that is currently playing.
-		self.video_id = ""
+		# List of video IDs to play after the current video ends.
+		self.playlist = [ "J5bhT4-9M0o", "kzHuCDDzP-E", "wV2rM672HhE" ]
+
+		# The current position in the playlist.
+		self.playlist_position = -1
 
 		# The service that is playing the video. (YouTube is the only one right now)
 		self.video_service = "YouTube"
@@ -60,7 +63,7 @@ class Room:
 	##############
 	# Various operations that can be performed on the room.
 
-	## PLAYBACK STUFF ##
+	#### PLAYBACK STUFF ####
 
 	def synchronize(self):
 		"""Synchronizes playback for all the users in the room."""
@@ -88,23 +91,44 @@ class Room:
 		"""Pauses the video in the room."""
 		print("Pausing room %s." % self.room_id)
 
+		new_current_pos = self.current_pos - 1 # Go back 1 second on pause.
+
 		# Set last position to the current position and set is_playing to false.
-		self.last_position = self.current_pos()
+		self.last_position = new_current_pos if new_current_pos >= 0 else 0
 		self.is_playing = False
 		if (sync): self.synchronize()
 
-	def change_video(self, new_vid):
+	def change_video(self, index):
 		"""Changes the video playing to the given video."""
-		print("Changing video in room %s to %s." % (self.room_id, new_vid))
+		print("Changing playlist position in room %s to %i." % (self.room_id, index))
 
-		self.video_id = new_vid
+		self.playlist_position = index
 		self.last_position = 0
 		self.start_time = int(time.time())
 		self.is_playing = True
 		[user.send_setvideo() for user in self.users]
 
 
-	## USER STUFF ##
+	#### PLAYLIST STUFF ####
+
+	def playlist_update(self):
+		"""Called when the playlist changes. Sends playlistupdate to all users."""
+		[user.send_playlistupdate() for user in self.users]
+
+	def add_video(self, new_vid):
+		"""Adds a video to the playlist."""
+		print("Added %s to playlist in room %s." % (new_vid, self.room_id))
+		self.playlist.append(new_vid)
+		self.playlist_update()
+
+	def remove_video(self, vid):
+		"""Removes the given video from the playlist."""
+		print("Removed %s from playlist in room %s." % (new_vid, self.room_id))
+		self.playlist.remove(vid)
+		self.playlist_update()
+
+
+	#### USER STUFF ####
 
 	def add_user(self, user):
 		"""
@@ -116,6 +140,7 @@ class Room:
 		# Add the user to the user list, and send them setvideo.
 		self.users.append(user)
 		user.send_setvideo()
+		user.send_playlistupdate()
 
 	def remove_user(self, user):
 		"""
@@ -132,6 +157,7 @@ class Room:
 	################
 	# Calculations such as the current video time.
 
+	@property
 	def current_pos(self):
 		"""Calculates the current time in the video based on start_time and last_position"""
 		# If the video is playing, the current position is the current time since epoch - start time + last position
@@ -140,3 +166,8 @@ class Room:
 		# If the video is paused, just return the last position.
 		else:
 			return self.last_position
+
+	@property
+	def video_id(self):
+		"""Gets the ID of the video that is currently playing."""
+		return self.playlist[self.playlist_position]

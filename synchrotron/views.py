@@ -34,4 +34,7 @@ def home_page():
 
 @app.route("/room/<room_id>")
 def room_page(room_id):
-	return render_template("player.j2", room_id = room_id, wsapi_url = app.config.get("WSAPI_URL"))
+	return render_template("player.j2", 
+		room_id = room_id, 
+		wsapi_url = app.config.get("WSAPI_URL"), 
+		yt_apikey = app.config.get("YT_APIKEY"))

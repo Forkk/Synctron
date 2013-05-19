@@ -50,6 +50,7 @@ class UserWebSocket(WebSocket):
 			"pause": self.action_pause,
 			"seek": self.action_seek,
 			"changevideo": self.action_changevideo,
+			"addvideo": self.action_addvideo,
 		}
 
 		# Generate a username for the user.
@@ -151,10 +152,19 @@ class UserWebSocket(WebSocket):
 	def action_changevideo(self, data):
 		"""
 		Changes the currently playing video.
+		Expects the following information: index
+		The index given specifies the index in the playlist of the video to play.
+		"""
+
+		self.room.change_video(data["index"])
+
+	def action_addvideo(self, data):
+		"""
+		Adds a video to the playlist.
 		Expects the following information: video_id
 		"""
 
-		self.room.change_video(data["video_id"])
+		self.room.add_video(data["video_id"])
 
 
 	###################
@@ -165,7 +175,7 @@ class UserWebSocket(WebSocket):
 		"""Sends a sync action to the client."""
 		self.send(json.dumps({
 			"action": "sync",
-			"video_time": self.room.current_pos(),
+			"video_time": self.room.current_pos,
 			"is_playing": self.room.is_playing,
 		}))
 
@@ -177,4 +187,12 @@ class UserWebSocket(WebSocket):
 			"video_service": self.room.video_service, 
 			# The ID of the video that's playing. Currently just a test.
 			"video_id": self.room.video_id,
+		}))
+
+	def send_playlistupdate(self):
+		"""Sends a playlistupdate action to the client."""
+		self.send(json.dumps({
+			"action": "playlistupdate",
+			# List of video IDs.
+			"playlist": self.room.playlist,
 		}))

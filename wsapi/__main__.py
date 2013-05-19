@@ -27,5 +27,5 @@ if __name__ == "__main__":
 	from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 	print("Running WebSocket server...")
-	server = WSGIServer(('localhost', 8889), WebSocketWSGIApplication(handler_cls=UserWebSocket))
+	server = WSGIServer(('0.0.0.0', 8889), WebSocketWSGIApplication(handler_cls=UserWebSocket))
 	server.serve_forever()

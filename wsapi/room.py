@@ -18,7 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import requests
+
 import time
+from threading import Timer
 
 # Calculating Video Time in Rooms:
 # Calculating the current time on a video in rooms is done using two values: start_time and current_pos.
@@ -43,7 +46,7 @@ class Room:
 		self.playlist = [ "J5bhT4-9M0o", "kzHuCDDzP-E", "wV2rM672HhE" ]
 
 		# The current position in the playlist.
-		self.playlist_position = -1
+		self.playlist_position = 0
 
 		# The service that is playing the video. (YouTube is the only one right now)
 		self.video_service = "YouTube"
@@ -56,6 +59,17 @@ class Room:
 
 		# The position the video was at the last time playback was paused.
 		self.last_position = 0
+
+		# Timer for when the video ends.
+		# This is used to figure out when we should go to the next video in the playlist.
+		self.video_timer = None
+
+		# Stores a cached value containing the video duration.
+		# When the video ends, this is set to None. 
+		# When checking the duration of the current video with video_duration, 
+		# if this is None, an API request will be made and the current duration
+		# of the video is stored here.
+		self.cached_duration = None
 
 
 	##############
@@ -73,6 +87,8 @@ class Room:
 		"""Plays the video in the room."""
 		print("Playing room %s." % self.room_id)
 
+		self.update_video_timer()
+
 		# Set the start time to the current time and set is_playing to true.
 		self.start_time = int(time.time())
 		self.is_playing = True
@@ -81,6 +97,8 @@ class Room:
 	def seek(self, seek_time, sync=True):
 		"""Seeks the video in the room to the given time (in seconds)."""
 		print("Seeking room %s to %i seconds." % (self.room_id, seek_time))
+
+		self.update_video_timer()
 
 		# Set last position to the time we want to seek to and reset the start time.
 		self.start_time = int(time.time())
@@ -93,20 +111,15 @@ class Room:
 
 		new_current_pos = self.current_pos - 1 # Go back 1 second on pause.
 
+		# Cancel the video timer.
+		if self.video_timer is not None:
+			self.video_timer.cancel()
+			self.video_timer = None
+
 		# Set last position to the current position and set is_playing to false.
 		self.last_position = new_current_pos if new_current_pos >= 0 else 0
 		self.is_playing = False
 		if (sync): self.synchronize()
-
-	def change_video(self, index):
-		"""Changes the video playing to the given video."""
-		print("Changing playlist position in room %s to %i." % (self.room_id, index))
-
-		self.playlist_position = index
-		self.last_position = 0
-		self.start_time = int(time.time())
-		self.is_playing = True
-		[user.send_setvideo() for user in self.users]
 
 
 	#### PLAYLIST STUFF ####
@@ -118,14 +131,63 @@ class Room:
 	def add_video(self, new_vid):
 		"""Adds a video to the playlist."""
 		print("Added %s to playlist in room %s." % (new_vid, self.room_id))
+
+		was_ended = self.playlist_ended
+
 		self.playlist.append(new_vid)
 		self.playlist_update()
+
+		# If the playlist was over before the video was added, change to the video we added.
+		if was_ended:
+			self.change_video(len(self.playlist) - 1)
 
 	def remove_video(self, vid):
 		"""Removes the given video from the playlist."""
 		print("Removed %s from playlist in room %s." % (new_vid, self.room_id))
 		self.playlist.remove(vid)
 		self.playlist_update()
+
+	def change_video(self, index):
+		"""Changes the video playing to the given video."""
+		print("Changing playlist position in room %s to %i." % (self.room_id, index))
+
+		self.cached_duration = None
+		self.playlist_position = index
+
+		self.update_video_timer(0)
+
+		self.last_position = 0
+		self.start_time = int(time.time())
+		self.is_playing = True
+		[user.send_setvideo() for user in self.users]
+
+	def video_ended(self):
+		"""Callback for the video timer used to figure out when the video ends."""
+		print("Video in room %s ended." % self.room_id)
+
+		# Increment playlist position.
+		self.change_video(self.playlist_position + 1)
+
+	def update_video_timer(self, elapsed_time=None):
+		"""
+		Cancels the existing video timer and resets it to go off at the end of the video.
+		If elapsed_time is not none, the value of elapsed_time will be used instead of the current_pos property.
+		"""
+		# Set the video timer to the duration of the video.
+		if self.video_timer is not None:
+			# Cancel the timer if it's already running.
+			self.video_timer.cancel()
+			self.video_timer = None
+
+		# If video_duration is 0, don't set the timer.
+		if self.video_duration <= 0:
+			return
+
+		# Set the timer to go off when the video ends.
+		time_remaining = self.video_duration - (self.current_pos if elapsed_time is None else elapsed_time)
+		print("Setting video timer for %i seconds." % time_remaining)
+		self.video_timer = Timer(time_remaining, self.video_ended)
+		self.video_timer.start()
 
 
 	#### USER STUFF ####
@@ -155,7 +217,7 @@ class Room:
 	################
 	# CALCULATIONS #
 	################
-	# Calculations such as the current video time.
+	# Calculations such as the current video time and the current video ID.
 
 	@property
 	def current_pos(self):
@@ -170,4 +232,28 @@ class Room:
 	@property
 	def video_id(self):
 		"""Gets the ID of the video that is currently playing."""
-		return self.playlist[self.playlist_position]
+
+		if self.playlist_ended:
+			# If the playlist position is past the end of the playlist, set the video ID to nothing.
+			return ""
+		else:
+			# Otherwise, set the video ID to the ID at the current position in the playlist.
+			return self.playlist[self.playlist_position]
+
+	@property
+	def playlist_ended(self):
+		"""True if the playlist has ended."""
+		return self.playlist_position >= len(self.playlist)
+
+	@property
+	def video_duration(self):
+		"""Does a YouTube API request and returns the duration of the currently playing video."""
+		# Return 0 if no video is playing.
+		if self.video_id == "":
+			return 0
+
+		if self.cached_duration is None:
+			req = requests.get("http://gdata.youtube.com/feeds/api/videos/%s?v=2&alt=json" % self.video_id)
+			response = req.json()
+			self.cached_duration = int(response["entry"]["media$group"]["yt$duration"]["seconds"])
+		return self.cached_duration

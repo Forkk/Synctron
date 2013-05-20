@@ -43,7 +43,7 @@ class Room:
 		self.users = []
 
 		# List of video IDs to play after the current video ends.
-		self.playlist = [ "J5bhT4-9M0o", "kzHuCDDzP-E", "wV2rM672HhE" ]
+		self.playlist = []
 
 		# The current position in the playlist.
 		self.playlist_position = 0
@@ -63,14 +63,6 @@ class Room:
 		# Timer for when the video ends.
 		# This is used to figure out when we should go to the next video in the playlist.
 		self.video_timer = None
-
-		# Stores a cached value containing the video duration.
-		# When the video ends, this is set to None. 
-		# When checking the duration of the current video with video_duration, 
-		# if this is None, an API request will be made and the current duration
-		# of the video is stored here.
-		self.cached_duration = None
-
 
 	##############
 	# OPERATIONS #
@@ -128,30 +120,38 @@ class Room:
 		"""Called when the playlist changes. Sends playlistupdate to all users."""
 		[user.send_playlistupdate() for user in self.users]
 
-	def add_video(self, new_vid):
+	def add_video(self, new_vid, user=None):
 		"""Adds a video to the playlist."""
 		print("Added %s to playlist in room %s." % (new_vid, self.room_id))
 
 		was_ended = self.playlist_ended
 
-		self.playlist.append(new_vid)
+		new_vid_info = self.get_video_info(new_vid)
+
+		if not new_vid_info:
+			if user:
+				user.send_error("invalid_vid", "The given video ID (%s) is not valid." % new_vid)
+			else:
+				print("Attempt to add invalid video ID: %s" % new_vid)
+			return
+
+		self.playlist.append(new_vid_info)
 		self.playlist_update()
 
 		# If the playlist was over before the video was added, change to the video we added.
 		if was_ended:
 			self.change_video(len(self.playlist) - 1)
 
-	def remove_video(self, vid):
+	def remove_video(self, vid, user=None):
 		"""Removes the given video from the playlist."""
 		print("Removed %s from playlist in room %s." % (new_vid, self.room_id))
 		self.playlist.remove(vid)
 		self.playlist_update()
 
-	def change_video(self, index):
+	def change_video(self, index, user=None):
 		"""Changes the video playing to the given video."""
 		print("Changing playlist position in room %s to %i." % (self.room_id, index))
 
-		self.cached_duration = None
 		self.playlist_position = index
 
 		self.update_video_timer(0)
@@ -179,12 +179,16 @@ class Room:
 			self.video_timer.cancel()
 			self.video_timer = None
 
-		# If video_duration is 0, don't set the timer.
-		if self.video_duration <= 0:
+		# If no video is playing, don't set the timer.
+		if not self.current_video:
+			return
+
+		# If duration is 0, don't set the timer.
+		if self.current_video["duration"] <= 0:
 			return
 
 		# Set the timer to go off when the video ends.
-		time_remaining = self.video_duration - (self.current_pos if elapsed_time is None else elapsed_time)
+		time_remaining = self.current_video["duration"] - (self.current_pos if elapsed_time is None else elapsed_time)
 		print("Setting video timer for %i seconds." % time_remaining)
 		self.video_timer = Timer(time_remaining, self.video_ended)
 		self.video_timer.start()
@@ -230,12 +234,11 @@ class Room:
 			return self.last_position
 
 	@property
-	def video_id(self):
-		"""Gets the ID of the video that is currently playing."""
-
+	def current_video(self):
+		"""Returns a dict containing info about the current video."""
 		if self.playlist_ended:
-			# If the playlist position is past the end of the playlist, set the video ID to nothing.
-			return ""
+			# If the playlist position is past the end of the playlist, return None.
+			return None
 		else:
 			# Otherwise, set the video ID to the ID at the current position in the playlist.
 			return self.playlist[self.playlist_position]
@@ -245,15 +248,15 @@ class Room:
 		"""True if the playlist has ended."""
 		return self.playlist_position >= len(self.playlist)
 
-	@property
-	def video_duration(self):
-		"""Does a YouTube API request and returns the duration of the currently playing video."""
-		# Return 0 if no video is playing.
-		if self.video_id == "":
-			return 0
-
-		if self.cached_duration is None:
-			req = requests.get("http://gdata.youtube.com/feeds/api/videos/%s?v=2&alt=json" % self.video_id)
-			response = req.json()
-			self.cached_duration = int(response["entry"]["media$group"]["yt$duration"]["seconds"])
-		return self.cached_duration
+	def get_video_info(self, vid):
+		"""
+		Does a YouTube API request and returns a dict containing information about the video.
+		If the given video ID is not a valid YouTube video ID, returns None.
+		"""
+		req = requests.get("http://gdata.youtube.com/feeds/api/videos/%s?v=2&alt=json" % vid)
+		response = req.json()
+		return {
+			"video_id": vid,
+			"title": response["entry"]["title"]["$t"],
+			"duration": int(response["entry"]["media$group"]["yt$duration"]["seconds"]),
+		}

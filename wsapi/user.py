@@ -74,7 +74,7 @@ class UserWebSocket(WebSocket):
 
 		# Try find an action that matches the specified action.
 		if not action in self.actions:
-			sock.send(json.dumps({ "action": "error", "reason": "invalid_action", "reason_msg": "Invalid action" }))
+			send_error("invalid_action", "An action was sent to the server that it did not understand.")
 		else:
 			self.actions[action](data)
 
@@ -181,12 +181,14 @@ class UserWebSocket(WebSocket):
 
 	def send_setvideo(self):
 		"""Sends a setvideo action to the client."""
+		current_video = self.room.current_video
+
 		self.send(json.dumps({
 			"action": "setvideo",
 			# The service that the video is playing from. Only YouTube is supported currently.
 			"video_service": self.room.video_service, 
 			# The ID of the video that's playing. Currently just a test.
-			"video_id": self.room.video_id,
+			"video_id": "" if current_video is None else current_video["video_id"],
 		}))
 
 	def send_playlistupdate(self):
@@ -194,5 +196,17 @@ class UserWebSocket(WebSocket):
 		self.send(json.dumps({
 			"action": "playlistupdate",
 			# List of video IDs.
-			"playlist": self.room.playlist,
+			"playlist": [item["video_id"] for item in self.room.playlist],
+		}))
+
+	def send_error(self, reason_id, reason_msg=None):
+		"""
+		Sends an error action to the client.
+		reason_id should be a unique reason ID string.
+		reason_msg should be a human readable error message. If not specified, will be the same as reason_id.
+		"""
+		self.send(json.dumps({
+			"action": "error",
+			"reason": reason_id,
+			"reason_msg": reason_msg if reason_msg else reason_id,
 		}))

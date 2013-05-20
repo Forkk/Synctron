@@ -20,12 +20,28 @@
 
 from wsapi.user import UserWebSocket
 
-# Main code for testing.
-if __name__ == "__main__":
+import sys
+import argparse
+
+def main(argv):
+	parser = argparse.ArgumentParser("wsapi", description="WebSocket server for Synchrotron.")
+
+	parser.add_argument("-l", "--host", action="store", default="localhost", 
+		help="the hostname to listen on (default: %(default)s)", metavar="HOST")
+	parser.add_argument("-p", "--port", action="store", default=8889, type=int,
+		help="the port to listen on (default: %(default)s)", metavar="PORT")
+
+	args = parser.parse_args(argv[1:])
+
 	from gevent import monkey; monkey.patch_all()
 	from ws4py.server.geventserver import WSGIServer
 	from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
-	print("Running WebSocket server...")
-	server = WSGIServer(('0.0.0.0', 8889), WebSocketWSGIApplication(handler_cls=UserWebSocket))
+	print("Running WebSocket server on %s:%i..." % (args.host, args.port))
+	server = WSGIServer((args.host, args.port), WebSocketWSGIApplication(handler_cls=UserWebSocket))
 	server.serve_forever()
+
+
+# Main code for testing.
+if __name__ == "__main__":
+	main(sys.argv)

@@ -162,9 +162,16 @@ class UserWebSocket(WebSocket):
 		"""
 		Adds a video to the playlist.
 		Expects the following information: video_id
+		Optionally, index can also be supplied. 
+		If index is an integer, the video will be added at the specified index.
 		"""
 
-		self.room.add_video(data["video_id"], user=self)
+		# Index to add the video at. Add to the end of the list if unspecified.
+		index = None
+		if "index" in data and type(data["index"]) is int:
+			index = data["index"]
+
+		self.room.add_video(data["video_id"], index=index, user=self)
 
 
 	###################
@@ -189,6 +196,8 @@ class UserWebSocket(WebSocket):
 			"video_service": self.room.video_service, 
 			# The ID of the video that's playing. Currently just a test.
 			"video_id": "" if current_video is None else current_video["video_id"],
+			# The index of the currently playing video in the playlist.
+			"playlist_pos": self.room.playlist_position,
 		}))
 
 	def send_playlistupdate(self):

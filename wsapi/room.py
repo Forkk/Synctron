@@ -120,8 +120,14 @@ class Room:
 		"""Called when the playlist changes. Sends playlistupdate to all users."""
 		[user.send_playlistupdate() for user in self.users]
 
-	def add_video(self, new_vid, user=None):
-		"""Adds a video to the playlist."""
+	def add_video(self, new_vid, index=None, user=None):
+		"""
+		Adds a video to the playlist.
+
+		If index is None, the video is added to the end of the list.
+		Otherwise, it is added at the given index.
+		"""
+
 		print("%s added video ID %s to playlist in room %s." % (user, new_vid, self.room_id))
 
 		was_ended = self.playlist_ended
@@ -135,7 +141,22 @@ class Room:
 				print("Attempt to add invalid video ID: %s" % new_vid)
 			return
 
-		self.playlist.append(new_vid_info)
+		if index is None:
+			self.playlist.append(new_vid_info)
+		else:
+			# If the index is invalid, error.
+			if type(index) is not int:
+				if user: user.send_error("invalid_index", "The given index (%s) isn't valid." % index)
+				else: print("Tried to add a video at an invalid index (%s)." % index)
+				return
+
+			if index > len(self.playlist):
+				self.playlist.append(new_vid_info)
+			else:
+				self.playlist.insert(index, new_vid_info)
+				if index < self.current_pos or (index == self.current_pos and not self.playlist_ended):
+					self.playlist_position += 1
+
 		self.playlist_update()
 
 		# If the playlist was over before the video was added, change to the video we added.
@@ -143,13 +164,19 @@ class Room:
 			self.change_video(len(self.playlist) - 1)
 
 	def remove_video(self, vid, user=None):
-		"""Removes the given video from the playlist."""
+		"""
+		Removes the given video from the playlist.
+		"""
+
 		print("%s removed video %s from playlist in room %s." % (user, new_vid, self.room_id))
 		self.playlist.remove(vid)
 		self.playlist_update()
 
 	def change_video(self, index, user=None):
-		"""Changes the video playing to the given video."""
+		"""
+		Changes the current position in the playlist to the given index.
+		"""
+
 		print("%s changed playlist position in room %s to %i." % (user, self.room_id, index))
 
 		self.playlist_position = index

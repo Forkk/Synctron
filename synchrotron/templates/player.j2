@@ -103,13 +103,27 @@ function initWebSocket()
 function onYouTubeIframeAPIReady()
 {
 	// Set up UI.
-	$("#videoform").submit(function()
+
+	var addEndFunc = function(evt)
 	{
 		var videoId = $("input#video_id").val();
-		console.log("Changing video to " + videoId);
+		console.log("Adding video " + videoId + " to the end of the playlist.");
 		sendAction({ action: "addvideo", video_id: videoId });
-		return false;
-	});
+		evt.preventDefault();
+	}
+
+	var addNextFunc = function(evt)
+	{
+		var videoId = $("input#video_id").val();
+		console.log("Adding video " + videoId + " after the current video (" + playlist_pos + ") in the playlist.");
+		sendAction({ action: "addvideo", video_id: videoId, index: playlist_pos + 1 });
+		evt.preventDefault();
+	}
+
+	$("#btn-add-end").click(addEndFunc);
+	$("#menu-add-end").click(addEndFunc);
+	$("#menu-add-next").click(addNextFunc);
+	$("#videoform").submit(addEndFunc);
 
 
 	// Set up player
@@ -191,6 +205,13 @@ function sendPause()
 }
 
 
+////////////////////////////
+// PLAYBACK CONTROL STUFF //
+////////////////////////////
+
+// Index of the currently playing video in the playlist.
+var playing_index = 0;
+
 // Whether or not the video should be playing.
 var is_playing = false;
 
@@ -204,6 +225,13 @@ var new_current_time = -1;
 // The time the video was last paused at.
 // When the user plays the video, if this differs from the video's current time, a seek is done.
 var time_paused = -1;
+
+
+function changeCurrentIndex(index)
+{
+	playlist_pos = index;
+	// Will be used later to highlight the currently playing video in the list.
+}
 
 
 function changePlaying(playing)
@@ -309,11 +337,14 @@ actions =
 	},
 
 	// Handles the init action sent from the server.
-	// Expects the following fields in data: video_id
+	// Expects the following fields in data: video_id, playlist_pos
 	// Doesn't return anything.
 	setvideo: function(data, sock)
 	{
+		// Set the current video.
 		vplayer.loadVideoById(data.video_id);
+		changeCurrentIndex(data.playlist_pos);
+
 		console.log("Requesting sync...");
 		sendAction({ action: "sync", });
 
@@ -379,18 +410,39 @@ actions =
 	<div id="player"></div>
 </div>
 
+
 <div class="well">
-	<h3>Playlist</h3>
+	<h2>Playlist</h2>
+
 	<hr />
+
+	<form name="videoform" id="videoform" action="javascript:void(0);" class="form-inline">
+		<fieldset>
+			<legend>Add Videos</legend>
+
+			<div class="input-append">
+				<input type="text" name="video_id" id="video_id" class="input-xxlarge" placeholder="YouTube video URL or ID..." />
+
+				<div class="btn-group">
+					<button type="button" class="btn" id="btn-add-end" href="#">Add Video</button>
+					<button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
+						<span class="caret"></span>
+					</button>
+					<ul class="dropdown-menu">
+						<li><a id="menu-add-end" tabindex="-1" href="#">Add to the end of the playlist.</a></li>
+						<li><a id="menu-add-next" tabindex="-1" href="#">Add after the currently playing video.</a></li>
+					</ul>
+				</div>
+			</div>
+		</fieldset>
+	</form>
+
+	<hr />
+
 	<ul class="media-list" id="playlist">
+		<!-- Playlist goes here. -->
 	</ul>
 </div>
-
-
-<form name="videoform" id="videoform" action="javascript:void(0);">
-	<input type="text" name="video_id" id="video_id" />
-	<button type="submit" id="submit" class="btn">Change Video</button>
-</form>
 
 {% endblock %}
 

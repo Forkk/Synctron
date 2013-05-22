@@ -23,6 +23,8 @@
 {% block js_body %}
 {{ super() }}
 
+<script type="text/javascript" src="/static/js/utils.js"></script>
+
 <script type="text/javascript">
 room_id = "{{ room_id }}"
 
@@ -108,7 +110,7 @@ function onYouTubeIframeAPIReady()
 	{
 		var videoId = $("input#video_id").val();
 		console.log("Adding video " + videoId + " to the end of the playlist.");
-		sendAction({ action: "addvideo", video_id: videoId });
+		addVideoToPlaylist(videoId);
 		evt.preventDefault();
 	}
 
@@ -116,7 +118,7 @@ function onYouTubeIframeAPIReady()
 	{
 		var videoId = $("input#video_id").val();
 		console.log("Adding video " + videoId + " after the current video (" + playlist_pos + ") in the playlist.");
-		sendAction({ action: "addvideo", video_id: videoId, index: playlist_pos + 1 });
+		addVideoToPlaylist(videoId, playlist_pos + 1);
 		evt.preventDefault();
 	}
 
@@ -178,6 +180,66 @@ function onYouTubeIframeAPIReady()
 
 	initWebSocket();
 };
+
+
+
+////////////////////////
+//// PLAYLIST LOGIC ////
+////////////////////////
+
+// Adds the given video ID or URL to the playlist. Shows an error if it isn't valid.
+function addVideoToPlaylist(video, index)
+{
+	vid = getVIDFromURL(video);
+
+	if (vid === undefined)
+	{
+		alert("That's not a valid YouTube video URL or ID.");
+		return;
+	}
+
+	if (index === undefined)
+	{
+		sendAction({ action: "addvideo", video_id: vid });
+	}
+	else
+	{
+		sendAction({ action: "addvideo", video_id: vid, index: playlist_pos + 1 });
+	}
+}
+
+// Determines the given URL's video ID.
+function getVIDFromURL(video)
+{
+	if (video.length == 11 && /[A-Za-z_\-]/.test(video))
+	{
+		// Assume it's a valid video ID.
+		return video;
+	}
+
+	// If it isn't a video ID, we need to parse it.
+	urlData = parseURL(video);
+
+	// Check if the URL is YouTube. If it's youtu.be, we need to parse it differently.
+	if (urlData.host.toLowerCase().indexOf("youtube") != -1)
+	{
+		// For standard YouTube URLs, the video ID is the "v" URL parameter.
+
+		// If there is no "v" parameter, this isn't a valid video URL.
+		if (urlData.params.v === undefined)
+			return undefined;
+		else
+			return urlData.params.v;
+	}
+	else if (urlData.host.toLowerCase().indexOf("youtu.be") != -1)
+	{
+		// For youtu.be URLs, the video ID is the path (without leading or trailing spaces).
+		return urlData.file;
+	}
+
+	// If we get here, it's not a YouTube video URL.
+	return undefined;
+}
 
 
 

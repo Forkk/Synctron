@@ -75,9 +75,9 @@ class Room:
 		"""Synchronizes playback for all the users in the room."""
 		[user.send_sync() for user in self.users]
 
-	def play(self, sync=True):
+	def play(self, sync=True, user=None):
 		"""Plays the video in the room."""
-		print("Playing room %s." % self.room_id)
+		print("%s played video in room %s." % (user, self.room_id))
 
 		self.update_video_timer()
 
@@ -86,9 +86,9 @@ class Room:
 		self.is_playing = True
 		if (sync): self.synchronize()
 
-	def seek(self, seek_time, sync=True):
+	def seek(self, seek_time, sync=True, user=None):
 		"""Seeks the video in the room to the given time (in seconds)."""
-		print("Seeking room %s to %i seconds." % (self.room_id, seek_time))
+		print("%s seeked to %i seconds in room %s." % (user, seek_time, self.room_id))
 
 		self.update_video_timer()
 
@@ -97,9 +97,9 @@ class Room:
 		self.last_position = int(seek_time)
 		if (sync): self.synchronize()
 
-	def pause(self, sync=True):
+	def pause(self, sync=True, user=None):
 		"""Pauses the video in the room."""
-		print("Pausing room %s." % self.room_id)
+		print("%s paused room %s." % (user, self.room_id))
 
 		new_current_pos = self.current_pos - 1 # Go back 1 second on pause.
 
@@ -122,7 +122,7 @@ class Room:
 
 	def add_video(self, new_vid, user=None):
 		"""Adds a video to the playlist."""
-		print("Added %s to playlist in room %s." % (new_vid, self.room_id))
+		print("%s added video ID %s to playlist in room %s." % (user, new_vid, self.room_id))
 
 		was_ended = self.playlist_ended
 
@@ -130,7 +130,7 @@ class Room:
 
 		if not new_vid_info:
 			if user:
-				user.send_error("invalid_vid", "The given video ID (%s) is not valid." % new_vid)
+				user.send_error("invalid_vid", "The given video ID (%s) is not valid or video info could not be loaded." % new_vid)
 			else:
 				print("Attempt to add invalid video ID: %s" % new_vid)
 			return
@@ -144,13 +144,13 @@ class Room:
 
 	def remove_video(self, vid, user=None):
 		"""Removes the given video from the playlist."""
-		print("Removed %s from playlist in room %s." % (new_vid, self.room_id))
+		print("%s removed video %s from playlist in room %s." % (user, new_vid, self.room_id))
 		self.playlist.remove(vid)
 		self.playlist_update()
 
 	def change_video(self, index, user=None):
 		"""Changes the video playing to the given video."""
-		print("Changing playlist position in room %s to %i." % (self.room_id, index))
+		print("%s changed playlist position in room %s to %i." % (user, self.room_id, index))
 
 		self.playlist_position = index
 
@@ -201,7 +201,7 @@ class Room:
 		Adds the given user to the room.
 		Called when the init action is received from the user.
 		"""
-		print("User '%s' joined room %s." % (user.username, self.room_id))
+		print("%s joined room %s." % (user, self.room_id))
 
 		# Add the user to the user list, and send them setvideo.
 		self.users.append(user)
@@ -214,7 +214,7 @@ class Room:
 		Called when a user's socket closes.
 		Do *NOT* send anything to the user that left the room inside this function.
 		"""
-		print("User '%s' left room %s." % (user.username, self.room_id))
+		print("%s left room %s." % (user, self.room_id))
 		self.users.remove(user)
 
 
@@ -254,7 +254,13 @@ class Room:
 		If the given video ID is not a valid YouTube video ID, returns None.
 		"""
 		req = requests.get("http://gdata.youtube.com/feeds/api/videos/%s?v=2&alt=json" % vid)
-		response = req.json()
+
+		try:
+			response = req.json()
+		except ValueError:
+			# If it's not valid JSON, this isn't a valid video ID.
+			return None
+
 		return {
 			"video_id": vid,
 			"title": response["entry"]["title"]["$t"],

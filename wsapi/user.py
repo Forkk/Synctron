@@ -127,14 +127,14 @@ class UserWebSocket(WebSocket):
 			self.send_sync()
 			return
 
-		self.room.play()
+		self.room.play(user=self)
 
 	def action_seek(self, data):
 		"""
 		Seeks the video to the time specified in data.
 		"""
 
-		self.room.seek(data["time"])
+		self.room.seek(data["time"], user=self)
 
 	def action_pause(self, data):
 		"""
@@ -147,7 +147,7 @@ class UserWebSocket(WebSocket):
 			self.send_sync()
 			return
 
-		self.room.pause()
+		self.room.pause(user=self)
 
 	def action_changevideo(self, data):
 		"""
@@ -156,7 +156,7 @@ class UserWebSocket(WebSocket):
 		The index given specifies the index in the playlist of the video to play.
 		"""
 
-		self.room.change_video(data["index"])
+		self.room.change_video(data["index"], user=self)
 
 	def action_addvideo(self, data):
 		"""
@@ -164,7 +164,7 @@ class UserWebSocket(WebSocket):
 		Expects the following information: video_id
 		"""
 
-		self.room.add_video(data["video_id"])
+		self.room.add_video(data["video_id"], user=self)
 
 
 	###################
@@ -210,3 +210,11 @@ class UserWebSocket(WebSocket):
 			"reason": reason_id,
 			"reason_msg": reason_msg if reason_msg else reason_id,
 		}))
+
+
+	###############
+	# OTHER STUFF #
+	###############
+
+	def __str__(self):
+		return "%s (%s)" % (self.username, self.peer_address[0])

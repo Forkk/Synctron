@@ -204,8 +204,14 @@ class UserWebSocket(WebSocket):
 		"""Sends a playlistupdate action to the client."""
 		self.send(json.dumps({
 			"action": "playlistupdate",
-			# List of video IDs.
-			"playlist": [item["video_id"] for item in self.room.playlist],
+			# List of objects containing video info.
+			# Yes, we could just pass the item dicts directly, but we want to make it pass only what is necessary.
+			# This way, if we add something to the playlist entry dicts, it won't be automatically passed through this.
+			"playlist": [{
+				"video_id": item["video_id"],
+				"title": item["title"],
+				"duration": item["duration"],
+			} for item in self.room.playlist],
 		}))
 
 	def send_error(self, reason_id, reason_msg=None):

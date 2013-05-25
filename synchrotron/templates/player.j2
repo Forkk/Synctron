@@ -10,6 +10,11 @@
 	cursor: pointer;
 }
 
+.table-hover tbody tr:hover > td
+{
+	background-color: #e5e5e5;
+}
+
 </style>
 
 {% endblock %}
@@ -187,7 +192,68 @@ function onYouTubeIframeAPIReady()
 //// PLAYLIST LOGIC ////
 ////////////////////////
 
+// Array for storing the playlist in.
+var playlistObj = [];
+
+// Re-builds the playlist table body element.
+function updatePlaylistElement()
+{
+	$("#playlist-body").html("");
+	playlistObj.forEach(function(entry, index)
+	{
+		// Build the rows and columns of the table.
+		var row = $("<tr id='plist-" + index + "'>");
+		row.append("<td>" + entry.title + "</td>");
+		row.append("<td>" + getTimeStr(entry.duration) + "</td>");
+		row.append("<td>" + entry.id + "</td>");
+
+		row.addClass("clickable");
+
+		if (index === playlist_pos)
+		{
+			row.addClass("info");
+		}
+
+		row.click(index, function(evt)
+		{
+			var clickedindex = evt.data;
+			console.log("Index clicked: " + clickedindex);
+			sendAction({ action: "changevideo", index: clickedindex, });
+		});
+
+		$("#playlist-body").append(row);
+	});
+}
+
+// Adds a new playlist entry for the given video ID.
+// If shouldUpdatePlaylist is true or unspecified, updatePlaylistElement will be called.
+function addPlaylistEntry(video, index, shouldUpdatePlaylist)
+{
+	var entry = {
+		id: video.video_id,
+		title: video.title,
+		duration: video.duration,
+	};
+	playlistObj.splice(index, 0, entry);
+
+	if (shouldUpdatePlaylist === undefined || shouldUpdatePlaylist === true)
+		updatePlaylistElement();
+
+	// $.ajax({
+	// 	url: "http://gdata.youtube.com/feeds/api/videos/" + vid + "?v=2&alt=json",
+	// 	dataType: "json",
+	// 	success: function(data)
+	// 	{
+	// 		entry.title = data.entry.title.$t;
+	// 		entry.duration = data.entry.media$group.yt$duration.seconds;
+	// 		updatePlaylistElement();
+	// 	},
+	// });
+}
+
+
 // Adds the given video ID or URL to the playlist. Shows an error if it isn't valid.
+// This is for when a user adds a video via the UI.
 function addVideoToPlaylist(video, index)
 {
 	vid = getVIDFromURL(video);
@@ -272,7 +338,7 @@ function sendPause()
 ////////////////////////////
 
 // Index of the currently playing video in the playlist.
-var playing_index = 0;
+var playlist_pos = -1;
 
 // Whether or not the video should be playing.
 var is_playing = false;
@@ -292,7 +358,7 @@ var time_paused = -1;
 function changeCurrentIndex(index)
 {
 	playlist_pos = index;
-	// Will be used later to highlight the currently playing video in the list.
+	updatePlaylistElement();
 }
 
 
@@ -307,7 +373,6 @@ function changeCurrentTime(time)
 	new_current_time = time;
 	set_new_current_time = true;
 }
-
 
 // Sets is_playing and plays or pauses the video.
 function setPlaying(playing)
@@ -428,35 +493,16 @@ actions =
 
 	playlistupdate: function (data, sock)
 	{
-		$("#playlist").html("");
-		data.playlist.forEach(function(vid, index)
+		// For now, we clear the playlist and reload info every time it changes.
+		// In the future, we'll do this in a more efficient way, but for now I just want to get it working.
+		playlistObj = [];
+
+		data.playlist.forEach(function(video, index)
 		{
-			// There's probably a better way to do this.
-			var itemElement = $("#playlist").append('<li class="media clickable" id="plistclick-' + index + '">\
-				<a id="plistanchor-' + index + '" class="pull-left">\
-				<img class="media-object" src="http://i.ytimg.com/vi/' + vid + '/default.jpg">\
-				</a>\
-				<div id="plist-' + index + '" class="media-body">\
-					<h4 class="media-heading">Loading...</h4>\
-					Loading video info, please wait.\
-				</div></a></li>');
-
-			$.ajax({
-				url: "http://gdata.youtube.com/feeds/api/videos/" + vid + "?v=2&alt=json",
-				dataType: "json",
-				success: function(data)
-				{
-					var title = data.entry.title.$t;
-					$("#plist-" + index).html('<h4 class="media-heading">' + title + '</h4>');
-				},
-			})
-
-			$("#plistclick-" + index).click(function(evt)
-			{
-				console.log("Changing current video to index " + index);
-				sendAction({ action: "changevideo", index: index });
-			});
+			addPlaylistEntry(video, index);
 		});
+
+		updatePlaylistElement();
 	},
 }
 
@@ -501,9 +547,16 @@ actions =
 
 	<hr />
 
-	<ul class="media-list" id="playlist">
-		<!-- Playlist goes here. -->
-	</ul>
+	<table class="table table-hover table-condensed">
+		<tr>
+			<th>Title</th>
+			<th>Length</th>
+			<th>Video ID</th>
+		</tr>
+
+		<tbody id="playlist-body">
+		</tbody>
+	</table>
 </div>
 
 {% endblock %}

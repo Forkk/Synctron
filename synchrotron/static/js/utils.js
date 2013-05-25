@@ -33,3 +33,24 @@ function parseURL(url)
 		segments: a.pathname.replace(/^\//,'').split('/')
 	};
 }
+
+
+// Returns a time string in the format HH:MM:SS or MM:SS for the given seconds.
+// If forceHrs is false or undefined, MM:SS will be used unless the given time is more than an hour.
+function getTimeStr(timeSecs, forceHrs)
+{
+	if (typeof forceHrs === "undefined")
+		forceHrs = false;
+
+	var hours = Math.floor(timeSecs / 3600);
+	var minutes = Math.floor((timeSecs - (hours * 3600)) / 60);
+	var seconds = timeSecs - (hours * 3600) - (minutes * 60);
+
+	if (hours < 10) {hours = "0" + hours;}
+	if (minutes < 10) {minutes = "0" + minutes;}
+	if (seconds < 10) {seconds = "0" + seconds;}
+	var time = "";
+	if (hours > 0 || forceHrs) time += hours + ":";
+	time += minutes + ":" + seconds;
+	return time;
+}

@@ -5,6 +5,16 @@
 
 <style>
 
+.center-contents
+{
+	text-align: center;
+}
+
+.center
+{
+	display: inline-block;
+}
+
 .clickable
 {
 	cursor: pointer;
@@ -13,6 +23,12 @@
 .table-hover tbody tr:hover > td
 {
 	background-color: #e5e5e5;
+}
+
+.small-margins
+{
+	margin-top: 2px;
+	margin-bottom: 2px;
 }
 
 </style>
@@ -136,8 +152,8 @@ function onYouTubeIframeAPIReady()
 	// Set up player
 	var lastState = -2;
 	vplayer = new YT.Player("player", {
-		width: "640",
-		height: "380",
+		width: "592",
+		height: "333",
 		videoId: "",
 		playerVars: { enablejsapi: 1 },
 		events: {
@@ -536,51 +552,82 @@ actions =
 
 {% block content %}
 
-<div id="player-div">
-	<div id="player"></div>
+<div class="row">
+	<div class="page-header"><h1>{{ room_id }} <small>Synchrotron</small></h1></div>
 </div>
 
+<div class="row">
+	<div class="span8">
+		<div id="player-div" class="well well-small center-contents">
+			<div id="player" class="center"></div>
+		</div>
 
-<div class="well">
-	<h2>Playlist</h2>
+		<div class="well">
+			<h3 class="small-margins">Playlist</h3>
 
-	<hr />
+			<hr />
 
-	<form name="videoform" id="videoform" action="javascript:void(0);" class="form-inline">
-		<fieldset>
-			<legend>Add Videos</legend>
+			<form name="videoform" id="videoform" action="javascript:void(0);" class="form-inline">
+				<fieldset>
+					<legend>Add Videos</legend>
 
-			<div class="input-append">
-				<input type="text" name="video_id" id="video_id" class="input-xxlarge" placeholder="YouTube video URL or ID..." />
+					<div class="input-append">
+						<input type="text" name="video_id" id="video_id" class="input-xlarge" placeholder="YouTube video URL or ID..." />
 
-				<div class="btn-group">
-					<button type="button" class="btn" id="btn-add-end" href="#">Add Video</button>
-					<button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
-						<span class="caret"></span>
-					</button>
-					<ul class="dropdown-menu">
-						<li><a id="menu-add-end" tabindex="-1" href="#">Add to the end of the playlist.</a></li>
-						<li><a id="menu-add-next" tabindex="-1" href="#">Add after the currently playing video.</a></li>
-					</ul>
-				</div>
-			</div>
-		</fieldset>
-	</form>
+						<div class="btn-group">
+							<button type="button" class="btn" id="btn-add-end" href="#">Add Video</button>
+							<button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
+								<span class="caret"></span>
+							</button>
+							<ul class="dropdown-menu">
+								<li><a id="menu-add-end" tabindex="-1" href="#">Add to the end of the playlist.</a></li>
+								<li><a id="menu-add-next" tabindex="-1" href="#">Add after the currently playing video.</a></li>
+							</ul>
+						</div>
+					</div>
+				</fieldset>
+			</form>
 
-	<hr />
+			<hr />
 
-	<table class="table table-hover table-condensed">
-		<tr>
-			<th>Title</th>
-			<th>Author</th>
-			<th>Length</th>
-			<th>Video ID</th>
-			<th></th>
-		</tr>
+			<table class="table table-hover table-condensed">
+				<thead>
+					<tr>
+						<th>Title</th>
+						<th>Author</th>
+						<th>Length</th>
+						<th>Video ID</th>
+						<th></th>
+					</tr>
+				</thead>
 
-		<tbody id="playlist-body">
-		</tbody>
-	</table>
+				<tbody id="playlist-body">
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+	<div class="span4">
+		<div class="well">
+			<h3 class="small-margins">Users</h3>
+
+			<table class="table table-hover table-condensed">
+				<tr>
+					<th>Name</th>
+				</tr>
+
+				<tbody id="userlist-body">
+					<tr>
+						<th>User list not yet implemented.</th>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div class="well">
+			<p>Chat is not yet implemented.</p>
+		</div>
+	</div>
 </div>
 
 {% endblock %}

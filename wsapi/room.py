@@ -154,7 +154,7 @@ class Room:
 				self.playlist.append(new_vid_info)
 			else:
 				self.playlist.insert(index, new_vid_info)
-				if index < self.current_pos or (index == self.current_pos and not self.playlist_ended):
+				if index < self.playlist_position or (index == self.playlist_position and not self.playlist_ended):
 					self.playlist_position += 1
 
 		self.playlist_update()
@@ -163,14 +163,28 @@ class Room:
 		if was_ended:
 			self.change_video(len(self.playlist) - 1)
 
-	def remove_video(self, vid, user=None):
+	def remove_video(self, index, user=None):
 		"""
 		Removes the given video from the playlist.
 		"""
 
-		print("%s removed video %s from playlist in room %s." % (user, new_vid, self.room_id))
-		self.playlist.remove(vid)
+		print("%s removed video number %i from playlist in room %s." % (user, index, self.room_id))
+
+		before_current = False
+
+		# We'll need to do some logic to determine what the current playing index will be changed to.
+		if index < self.playlist_position:
+			# If we're removing a video that's before the one that's currently playing, decrement the current_pos by one.
+			self.playlist_position -= 1
+			before_current = True
+
+		del self.playlist[index]
 		self.playlist_update()
+
+		if not before_current and index == self.playlist_position:
+			# If we're removing the video that's currently playing, the playlist position stays the same,
+			# but we need to set the playing video to the one at the new current position.
+			self.change_video(self.playlist_position);
 
 	def change_video(self, index, user=None):
 		"""

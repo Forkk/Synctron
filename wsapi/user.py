@@ -51,6 +51,7 @@ class UserWebSocket(WebSocket):
 			"seek": self.action_seek,
 			"changevideo": self.action_changevideo,
 			"addvideo": self.action_addvideo,
+			"removevideo": self.action_removevideo,
 		}
 
 		# Generate a username for the user.
@@ -74,7 +75,7 @@ class UserWebSocket(WebSocket):
 
 		# Try find an action that matches the specified action.
 		if not action in self.actions:
-			send_error("invalid_action", "An action was sent to the server that it did not understand.")
+			self.send_error("invalid_action", "An action was sent to the server that it did not understand.")
 		else:
 			self.actions[action](data)
 
@@ -173,6 +174,14 @@ class UserWebSocket(WebSocket):
 
 		self.room.add_video(data["video_id"], index=index, user=self)
 
+	def action_removevideo(self, data):
+		"""
+		Removes a video from the playlist.
+		Expects the following information: index
+		"""
+
+		self.room.remove_video(data["index"], user=self)
+
 
 	###################
 	# SENDING ACTIONS #
@@ -212,6 +221,7 @@ class UserWebSocket(WebSocket):
 				"title": item["title"],
 				"duration": item["duration"],
 			} for item in self.room.playlist],
+			"playlist_position": self.room.playlist_position,
 		}))
 
 	def send_error(self, reason_id, reason_msg=None):

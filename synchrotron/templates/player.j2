@@ -195,31 +195,51 @@ function onYouTubeIframeAPIReady()
 // Array for storing the playlist in.
 var playlistObj = [];
 
+// Index of the currently playing video in the playlist.
+var playlist_pos = -1;
+
 // Re-builds the playlist table body element.
 function updatePlaylistElement()
 {
 	$("#playlist-body").html("");
 	playlistObj.forEach(function(entry, index)
 	{
+		var changeVideoClickFunc = function(evt)
+		{
+			evt.preventDefault();
+			var clickedindex = evt.data;
+			sendAction({ action: "changevideo", index: clickedindex, });
+		};
+
+		var removeVideoClickFunc = function(evt)
+		{
+			evt.preventDefault();
+			var clickedindex = evt.data;
+			sendAction({ action: "removevideo", index: clickedindex, });
+		};
+
 		// Build the rows and columns of the table.
 		var row = $("<tr id='plist-" + index + "'>");
-		row.append("<td>" + entry.title + "</td>");
-		row.append("<td>" + getTimeStr(entry.duration) + "</td>");
-		row.append("<td>" + entry.id + "</td>");
+		var titleCol = $("<td>");
+		var timeCol  = $("<td>" + getTimeStr(entry.duration) + "</td>");
+		var idCol    = $("<td>" + entry.id + "</td>");
+		var closeCol = $("<td>");
 
-		row.addClass("clickable");
+		var titleLnk = $("<a href='#'>" + entry.title + "</a>").click(index, changeVideoClickFunc);
+		var closeBtn = $("<button type='button' class='close'>&times;</button>").click(index, removeVideoClickFunc);
+
+		row.append(titleCol);
+		row.append(timeCol);
+		row.append(idCol);
+		row.append(closeCol);
+
+		titleCol.append(titleLnk);
+		closeCol.append(closeBtn);
 
 		if (index === playlist_pos)
 		{
 			row.addClass("info");
 		}
-
-		row.click(index, function(evt)
-		{
-			var clickedindex = evt.data;
-			console.log("Index clicked: " + clickedindex);
-			sendAction({ action: "changevideo", index: clickedindex, });
-		});
 
 		$("#playlist-body").append(row);
 	});
@@ -336,9 +356,6 @@ function sendPause()
 ////////////////////////////
 // PLAYBACK CONTROL STUFF //
 ////////////////////////////
-
-// Index of the currently playing video in the playlist.
-var playlist_pos = -1;
 
 // Whether or not the video should be playing.
 var is_playing = false;
@@ -502,6 +519,8 @@ actions =
 			addPlaylistEntry(video, index);
 		});
 
+		playlist_pos = data.playlist_position;
+
 		updatePlaylistElement();
 	},
 }
@@ -552,6 +571,7 @@ actions =
 			<th>Title</th>
 			<th>Length</th>
 			<th>Video ID</th>
+			<th></th>
 		</tr>
 
 		<tbody id="playlist-body">

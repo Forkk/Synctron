@@ -219,6 +219,7 @@ class UserWebSocket(WebSocket):
 			"playlist": [{
 				"video_id": item["video_id"],
 				"title": item["title"],
+				"author": item["author"],
 				"duration": item["duration"],
 			} for item in self.room.playlist],
 			"playlist_position": self.room.playlist_position,

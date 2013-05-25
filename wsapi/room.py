@@ -132,7 +132,7 @@ class Room:
 
 		was_ended = self.playlist_ended
 
-		new_vid_info = self.get_video_info(new_vid)
+		new_vid_info = self.get_video_info(new_vid, user)
 
 		if not new_vid_info:
 			if user:
@@ -289,7 +289,7 @@ class Room:
 		"""True if the playlist has ended."""
 		return self.playlist_position >= len(self.playlist)
 
-	def get_video_info(self, vid):
+	def get_video_info(self, vid, user=None):
 		"""
 		Does a YouTube API request and returns a dict containing information about the video.
 		If the given video ID is not a valid YouTube video ID, returns None.
@@ -302,8 +302,14 @@ class Room:
 			# If it's not valid JSON, this isn't a valid video ID.
 			return None
 
+		author = None
+		if len(response["entry"]["author"]) > 0:
+			author = response["entry"]["author"][0]["name"]["$t"]
+
 		return {
 			"video_id": vid,
 			"title": response["entry"]["title"]["$t"],
+			"author": author,
 			"duration": int(response["entry"]["media$group"]["yt$duration"]["seconds"]),
+			"added_by": user,
 		}

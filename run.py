@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from synchrotron import app
+from tubesync import app
 
 if __name__ == "__main__":
 	app.run(host = "localhost", port = 8000, debug = True)

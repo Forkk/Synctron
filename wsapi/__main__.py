@@ -24,7 +24,7 @@ import sys
 import argparse
 
 def main(argv):
-	parser = argparse.ArgumentParser("wsapi", description="WebSocket server for Synchrotron.")
+	parser = argparse.ArgumentParser("wsapi", description="WebSocket server for TubeSync.")
 
 	parser.add_argument("-l", "--host", action="store", default="localhost", 
 		help="the hostname to listen on (default: %(default)s)", metavar="HOST")

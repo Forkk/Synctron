@@ -20,7 +20,7 @@
 
 from flask import render_template
 
-from synchrotron import app
+from tubesync import app
 
 import json
 

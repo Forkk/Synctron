@@ -21,7 +21,7 @@
 from flask import Flask
 
 app = Flask(__name__)
-app.config.from_object("synchrotron.default_settings")
+app.config.from_object("tubesync.default_settings")
 app.config.from_envvar("SYNC_SETTINGS")
 
-import synchrotron.views
+import tubesync.views

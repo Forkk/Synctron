@@ -52,6 +52,7 @@ class UserWebSocket(WebSocket):
 			"changevideo": self.action_changevideo,
 			"addvideo": self.action_addvideo,
 			"removevideo": self.action_removevideo,
+			"changenick": self.action_changenick,
 		}
 
 		# Generate a username for the user.
@@ -182,6 +183,15 @@ class UserWebSocket(WebSocket):
 
 		self.room.remove_video(data["index"], user=self)
 
+	def action_changenick(self, data):
+		"""
+		Action for a user changing their nickname.
+		"""
+
+		print("User %s is changing their nick to %s." % (self.username, data["newnick"]));
+		self.username = data["newnick"];
+		self.room.user_list_update();
+
 
 	###################
 	# SENDING ACTIONS #
@@ -223,6 +233,28 @@ class UserWebSocket(WebSocket):
 				"duration": item["duration"],
 			} for item in self.room.playlist],
 			"playlist_position": self.room.playlist_position,
+		}))
+
+	def send_userlistupdate(self):
+		"""Sends a userlistupdate action to the client."""
+		self.send(json.dumps({
+			"action": "userlistupdate",
+			# List of objects containing user info.
+			# See the comment in the above send_playlistupdate for the reason why it's done like this.
+			"userlist": [{
+				"username": user.username,
+				"isyou": user is self,
+			} for user in self.room.users],
+		}))
+
+	def send_nickupdate(self, newname=None):
+		"""
+		Sends a namechanged action to the client.
+		This action tells the client that their name has been changed.
+		"""
+		self.send(json.dumps({
+			"action": "namechanged",
+			"name": self.username if newname is not None else newname,
 		}))
 
 	def send_error(self, reason_id, reason_msg=None):

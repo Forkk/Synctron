@@ -237,6 +237,10 @@ class Room:
 
 	#### USER STUFF ####
 
+	def user_list_update(self):
+		"""Called when the user list changes. Sends userlistupdate to all users."""
+		[user.send_userlistupdate() for user in self.users]
+
 	def add_user(self, user):
 		"""
 		Adds the given user to the room.
@@ -248,6 +252,7 @@ class Room:
 		self.users.append(user)
 		user.send_setvideo()
 		user.send_playlistupdate()
+		self.user_list_update()
 
 	def remove_user(self, user):
 		"""
@@ -257,6 +262,7 @@ class Room:
 		"""
 		print("%s left room %s." % (user, self.room_id))
 		self.users.remove(user)
+		self.user_list_update()
 
 
 	################

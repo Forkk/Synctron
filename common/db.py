@@ -18,16 +18,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from flask import Flask
-from flask.ext.sqlalchemy import SQLAlchemy
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
 
-from common.db import Base
+Base = declarative_base()
 
-app = Flask(__name__)
-app.config.from_object("tubesync.default_settings")
-app.config.from_envvar("SYNC_SETTINGS")
 
-db = SQLAlchemy(app)
-Base.metadata.create_all(db.engine)
+class UserData(Base):
+	"""
+	Class representing information about a user as it is stored in the database.
+	"""
 
-import tubesync.views
+	__tablename__ = "users"
+
+	id = Column(Integer, primary_key=True) # User ID
+	name = Column(String(80), unique=True) # Username
+	password = Column(String(80)) # Hash of user's password
+	email = Column(String(320)) # User's email address
+
+	def __init__(self, name, password, email):
+		self.name = name
+		self.password = password
+		self.email = email
+

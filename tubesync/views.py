@@ -18,13 +18,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from flask import render_template
+from flask import render_template, request, abort
 
-from tubesync import app
+from passlib.hash import sha256_crypt
+
+from tubesync import app, db
 
 import json
 
-import wsapi
+from common.db import UserData
 
 
 @app.route("/")
@@ -32,9 +34,36 @@ def home_page():
 	return "Move along! Nothing to see here!"
 
 
+@app.route("/signup")
+def signup_page():
+	return render_template("signup.j2")
+
+@app.route("/signup/ajax", methods=["POST"])
+def signup_submit():
+	# Make sure the request is valid.
+	if ("username" not in request.form or
+		"password" not in request.form or
+		"email"    not in request.form):
+	   abort(400) # Bad request.
+	
+	# Check if there's already a user with this username.
+	if db.session.query(UserData).filter_by(name=request.form["username"]).first() is not None:
+		# The username is taken.
+		return json.dumps({ "success": False, "error_id": "name_taken", "error_msg": "That username is already taken." })
+
+	# Hash the password.
+	passhash = sha256_crypt.encrypt(request.form["password"])
+
+	# Create the user,
+	udata = UserData(request.form["username"], passhash, request.form["email"])
+	db.session.add(udata)
+	db.session.commit()
+
+	return json.dumps({ "success": True, })
+
+
 @app.route("/room/<room_id>")
 def room_page(room_id):
 	return render_template("player.j2", 
 		room_id = room_id, 
-		wsapi_url = app.config.get("WSAPI_URL"), 
-		yt_apikey = app.config.get("YT_APIKEY"))
+		wsapi_url = app.config.get("WSAPI_URL"))

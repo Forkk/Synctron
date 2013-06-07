@@ -1,14 +1,17 @@
 {% extends "base.j2" %}
 {% import "forms.j2" as forms %}
 
-{% block title %}Sign Up - TubeSync{% endblock %}
+{% block title %}Log In - TubeSync{% endblock %}
 
 {% block content %}
-{{ forms.login_form() }}
+<div class="row">
+	<div class="span12">
+		{{ forms.login_form() }}
+	</div>
+</div>
 {% endblock %}
 
 {% block js_body %}
 {{ super() }}
-<script type="text/javascript" src="/static/js/ajaxerrors.js"></script>
 <script type="text/javascript" src="/static/js/pages/login_form.js"></script>
 {% endblock %}

@@ -1,0 +1,48 @@
+.center-contents
+{
+	text-align: center;
+}
+
+.center
+{
+	display: inline-block;
+}
+
+.clickable
+{
+	cursor: pointer;
+}
+
+.table-hover tbody tr:hover > td
+{
+	background-color: #e5e5e5;
+}
+
+.small-margins
+{
+	margin-top: 2px;
+	margin-bottom: 2px;
+}
+
+td.expand,
+th.expand
+{
+	width: 100%;
+}
+
+.trunc-extra
+{
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.playlist-table
+{
+	white-space: nowrap;
+	table-layout: fixed;
+}
+
+.monospace
+{
+	font-family: monospace;
+}

@@ -9,7 +9,33 @@
 			<label for="password">Password:</label>
 			<input id="password" name="password"  type="password" placeholder="Password">
 
+			<br />
+
 			<button id="login-btn" type="submit" class="btn btn-primary">Log In</button>
+		</fieldset>
+	</form>
+{% endmacro %}
+
+{% macro signup_form() %}
+	<form id="signup-form">
+		<fieldset>
+			<legend>Create an account</legend>
+
+			<label for="username">Username</label>
+			<input id="username" type="text" placeholder="Username" required>
+			<!-- <span class="help-block">Your username must </span> -->
+
+			<label for="email">Email address</label>
+			<input id="email" name="email" type="email" placeholder="your@email.com" required>
+			<span class="help-block">We will <b>never</b> give out your email address. We will only use it to send you important notifications about your account (not annoying spam) and to verify your account so we can make sure you're not an evil robot from the future.</span>
+
+			<label for="password">Password</label>
+			<input id="password" name="password"  type="password" placeholder="Password" required><br/>
+			<input id="repeatpwd" name="repeatpwd" type="password" placeholder="Repeat password" maxlength="32" required>
+
+			<br />
+
+			<button id="submitbtn" type="submit" class="btn btn-primary">Submit</button>
 		</fieldset>
 	</form>
 {% endmacro %}

@@ -22,7 +22,7 @@ from flask import render_template, request, session, url_for, abort, redirect
 
 from passlib.hash import sha512_crypt
 
-from tubesync import app, db
+from synctron import app, db
 
 import json
 import uuid

@@ -24,10 +24,10 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from common.db import Base
 
 app = Flask(__name__)
-app.config.from_object("tubesync.default_settings")
+app.config.from_object("synctron.default_settings")
 app.config.from_envvar("SYNC_SETTINGS")
 
 db = SQLAlchemy(app)
 Base.metadata.create_all(db.engine)
 
-import tubesync.views
+import synctron.views

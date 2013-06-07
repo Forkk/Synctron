@@ -32,7 +32,7 @@ class UserData(Base):
 
 	id = Column(Integer, primary_key=True) # User ID
 	name = Column(String(80), unique=True) # Username
-	password = Column(String(80)) # Hash of user's password
+	password = Column(String(160)) # Hash of user's password
 	email = Column(String(320)) # User's email address
 
 	# User's session ID.

@@ -20,7 +20,7 @@
 
 from flask import render_template, request, abort
 
-from passlib.hash import sha256_crypt
+from passlib.hash import sha512_crypt
 
 from tubesync import app, db
 
@@ -58,7 +58,7 @@ def login_submit():
 		return json.dumps({ "success": False, "error_id": "bad_login", "error_msg": "Wrong username or password." })
 	else:
 		# Otherwise, verify the password.
-		if sha256_crypt.verify(request.form["password"], user.password):
+		if sha512_crypt.verify(request.form["password"], user.password):
 			# Login succeeded. Generate a UUID and give it to the client.
 			sessid = uuid.uuid4().hex
 
@@ -95,7 +95,7 @@ def signup_submit():
 		return json.dumps({ "success": False, "error_id": "name_taken", "error_msg": "That username is already taken." })
 
 	# Hash the password.
-	passhash = sha256_crypt.encrypt(request.form["password"])
+	passhash = sha512_crypt.encrypt(request.form["password"])
 
 	# Create the user,
 	udata = UserData(request.form["username"], passhash, request.form["email"])

@@ -29,7 +29,7 @@ $(document).ready(function()
 			url: "/login/ajax",
 			data: $.param({
 				username: $("#username").val(),
-				password: $("#password").val(),
+				password: CryptoJS.SHA384($("#password").val()).toString(),
 			}),
 			dataType: "json",
 

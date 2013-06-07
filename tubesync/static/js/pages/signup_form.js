@@ -72,7 +72,7 @@ $(document).ready(function()
 				url: "/signup/ajax",
 				data: $.param({
 					username: $("#username").val(),
-					password: $("#password").val(),
+					password: CryptoJS.SHA384($("#password").val()).toString(),
 					email:    $("#email").val(),
 				}),
 				dataType: "json",

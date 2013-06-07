@@ -14,9 +14,13 @@
 {% block js_body %}
 {{ super() }}
 
+<script type="text/javascript">
 {% if success_redirect_url %}
-<script type="text/javascript">loginSuccessHref = "{{ success_redirect_url }}";</script>
+loginSuccessHref = "{{ success_redirect_url }}";
+{% else %}
+loginSuccessHref = undefined;
 {% endif %}
+</script>
 
 <script type="text/javascript" src="/static/js/pages/login_form.js"></script>
 {% endblock %}

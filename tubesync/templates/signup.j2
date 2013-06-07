@@ -3,11 +3,6 @@
 
 {% block title %}Sign Up - TubeSync{% endblock %}
 
-{% block js_head %}
-{{ super() }}
-<script type='text/javascript' src='/static/js/jquery.validate.min.js'></script>
-{% endblock %}
-
 {% block content %}
 
 <div class="row">
@@ -20,5 +15,7 @@
 
 {% block js_body %}
 {{ super() }}
+<script type='text/javascript' src='/static/js/jquery.validate.min.js'></script>
+
 <script type="text/javascript" src="/static/js/pages/signup_form.js"></script>
 {% endblock %}

@@ -1,0 +1,15 @@
+{% macro login_form() %}
+	<form id="login-form">
+		<fieldset>
+			<legend>Login</legend>
+
+			<label for="username">Username:</label>
+			<input id="username" name="username" type="text" placeholder="Username">
+
+			<label for="password">Password:</label>
+			<input id="password" name="password"  type="password" placeholder="Password">
+
+			<button id="login-btn" type="submit" class="btn btn-primary">Log In</button>
+		</fieldset>
+	</form>
+{% endmacro %}

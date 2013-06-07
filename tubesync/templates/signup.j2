@@ -26,7 +26,7 @@
 				<span class="help-block">We will <b>never</b> give out your email address. We will only use it to send you important notifications about your account (not annoying spam) and to verify your account so we can make sure you're not an evil robot from the future.</span>
 
 				<label for="password">Password</label>
-				<input id="password" name="password"  type="password" placeholder="Password" maxlength="32" required>
+				<input id="password" name="password"  type="password" placeholder="Password" required>
 				<input id="repeatpwd" name="repeatpwd" type="password" placeholder="Repeat password" maxlength="32" required>
 				<!-- <span class="help-block">Your password must be 6-32 characters long. We recommend using uppercase letters, lowercase letters, numbers, and symbols, but if you don't want to, that's fine. Just don't come crying when your password gets cracked.</span> -->
 
@@ -111,15 +111,16 @@ $(document).ready(function()
 					else
 					{
 						// The server gave us an error.
-						switch (data.error)
+						switch (data.error_id)
 						{
 						case "name_taken":
 							alert("That username is already taken.");
+							break;
 
 						default:
 							alert(data.error_msg);
+							break;
 						}
-						return;
 					}
 				},
 

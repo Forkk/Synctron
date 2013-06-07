@@ -25,6 +25,7 @@ from passlib.hash import sha256_crypt
 from tubesync import app, db
 
 import json
+import uuid
 
 from common.db import UserData
 
@@ -33,6 +34,48 @@ from common.db import UserData
 def home_page():
 	return "Move along! Nothing to see here!"
 
+
+###########
+## LOGIN ##
+###########
+
+@app.route("/login")
+def login_page():
+	return render_template("login.j2")
+
+@app.route("/login/ajax", methods=["POST"])
+def login_submit():
+	# Make sure the request is valid.
+	if ("username" not in request.form or
+		"password" not in request.form):
+		abort(400) # Bad request.
+
+	# Find the given user.
+	user = db.session.query(UserData).filter_by(name=request.form["username"]).first()
+
+	if user is None:
+		# If there's no user by that name, bad login.
+		return json.dumps({ "success": False, "error_id": "bad_login", "error_msg": "Wrong username or password." })
+	else:
+		# Otherwise, verify the password.
+		if sha256_crypt.verify(request.form["password"], user.password):
+			# Login succeeded. Generate a UUID and give it to the client.
+			sessid = uuid.uuid4().hex
+
+			# TODO: There's probably a better way to implement session IDs.
+			user.session_id = sessid
+			user.session_ip = request.remote_addr
+			db.session.commit()
+
+			return json.dumps({ "success": True, "sessid": sessid })
+		else:
+			# Bad login.
+			return json.dumps({ "success": False, "error_id": "bad_login", "error_msg": "Wrong username or password." })
+
+
+############
+## SIGNUP ##
+############
 
 @app.route("/signup")
 def signup_page():

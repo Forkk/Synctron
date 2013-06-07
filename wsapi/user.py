@@ -20,17 +20,19 @@
 
 from ws4py.websocket import WebSocket
 
+from base64 import urlsafe_b64decode
 import json
 import time
 
 from common.db import UserData
 
 from wsapi.room import Room
-
+	
 from sqlalchemy.orm import sessionmaker
 
-Session = sessionmaker()
+from werkzeug.contrib.securecookie import SecureCookie
 
+Session = sessionmaker()
 
 rooms = {
 	
@@ -42,6 +44,8 @@ rooms = {
 
 class UserWebSocket(WebSocket):
 	usercount = 0
+
+	secret_key = ""
 
 	#######################
 	# WEBSOCKET FUNCTIONS #
@@ -107,10 +111,14 @@ class UserWebSocket(WebSocket):
 			self.close(1008, "init action requires a room ID")
 			return
 
-		if "sessid" in data:
-			# If a session ID was given, attempt to load user info from the database.
-			session = Session()
-			user = session.query(UserData).filter_by(session_id=data["sessid"], session_ip=self.peer_address[0]).first()
+		if "session" in data:
+			# If a session was given, attempt to read it and load user info from the database.
+			user = None
+			session_data = SecureCookie.unserialize(data["session"], UserWebSocket.secret_key)
+
+			if "username" in session_data:
+				dbsession = Session()
+				user = dbsession.query(UserData).filter_by(name=session_data["username"]).first()
 
 			if user is not None:
 				# User is authenticated.

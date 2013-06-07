@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from flask import render_template, request, abort
+from flask import render_template, request, session, url_for, abort, redirect
 
 from passlib.hash import sha512_crypt
 
@@ -31,8 +31,8 @@ from common.db import UserData
 
 
 @app.route("/")
-def home_page():
-	return "Move along! Nothing to see here!"
+def index():
+	return render_template("home.j2")
 
 
 ###########
@@ -42,6 +42,7 @@ def home_page():
 @app.route("/login")
 def login_page():
 	return render_template("login.j2")
+	
 
 @app.route("/login/ajax", methods=["POST"])
 def login_submit():
@@ -59,18 +60,17 @@ def login_submit():
 	else:
 		# Otherwise, verify the password.
 		if sha512_crypt.verify(request.form["password"], user.password):
-			# Login succeeded. Generate a UUID and give it to the client.
-			sessid = uuid.uuid4().hex
-
-			# TODO: There's probably a better way to implement session IDs.
-			user.session_id = sessid
-			user.session_ip = request.remote_addr
-			db.session.commit()
-
-			return json.dumps({ "success": True, "sessid": sessid })
+			# Login succeeded. Set up the user's session.
+			session["username"] = user.name
+			return json.dumps({ "success": True })
 		else:
 			# Bad login.
 			return json.dumps({ "success": False, "error_id": "bad_login", "error_msg": "Wrong username or password." })
+
+@app.route("/logout", methods=["GET", "POST"])
+def logout_page():
+	session.pop("username", None)
+	return redirect(url_for("index"))
 
 
 ############

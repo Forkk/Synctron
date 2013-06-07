@@ -33,6 +33,8 @@ def main(argv):
 
 	parser.add_argument("-d", "--dburi", action="store", default="mysql://sync@127.0.0.1/sync",
 		help="the SQLAlchemy database URI to connect to (default: %(default)s)", metavar="DB")
+	parser.add_argument("-k", "--key", action="store", default="defaultsecretthatshouldbechangedwhenusedinproduction",
+		help="the secret key that will be used to deserialize session info", metavar="KEY")
 
 	args = parser.parse_args(argv[1:])
 
@@ -44,6 +46,8 @@ def main(argv):
 
 	engine = create_engine(args.dburi)
 	Session.configure(bind=engine)
+
+	UserWebSocket.secret_key = args.key
 
 	print("Running WebSocket server on %s:%i..." % (args.host, args.port))
 	server = WSGIServer((args.host, args.port), WebSocketWSGIApplication(handler_cls=UserWebSocket))

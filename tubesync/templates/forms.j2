@@ -1,3 +1,9 @@
+{#
+	A class containing macros for various forms such as the log in form and sign up form.
+#}
+
+
+{# Generates the login form used for logging in. #}
 {% macro login_form() %}
 	<form id="login-form">
 		<fieldset>
@@ -16,6 +22,8 @@
 	</form>
 {% endmacro %}
 
+
+{# Generates the signup form used for creating an account. #}
 {% macro signup_form() %}
 	<form id="signup-form">
 		<fieldset>
@@ -38,4 +46,44 @@
 			<button id="submitbtn" type="submit" class="btn btn-primary">Submit</button>
 		</fieldset>
 	</form>
+{% endmacro %}
+
+
+{#
+	Generates the navbar shown at the top of the page.
+	
+	If username is specified, shows an account dropdown menu on the right. Otherwise, shows a log in and create account button.
+#}
+{% macro navbar() %}
+	<div class="navbar">
+		<div class="navbar-inner">
+			<a class="brand" href="/">TubeSync</a>
+			<ul class="nav">
+				<li><a href="/">Home</a></li>
+			</ul>
+
+			<ul class="nav pull-right">
+				{% if "username" not in session %}
+
+				<li class="pull-right"><a href="/login">Log In</a></li>
+				<li class="pull-right"><a href="/signup">Create Account</a></li>
+
+				{% else %}
+
+				<li class="dropdown">
+					<a href="#" class="dropdown-toggle" data-toggle="dropdown">
+						{{ session["username"] }}
+						<b class="caret"></b>
+					</a>
+					<ul class="dropdown-menu">
+						<li><a href="#">Account Settings</a></li>
+						<li class="divider"></li>
+						<li><a href="/logout">Log Out</a></li>
+					</ul>
+				</li>
+
+				{% endif %}
+			</ul>
+		</div>
+	</div>
 {% endmacro %}

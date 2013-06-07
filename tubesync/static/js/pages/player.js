@@ -155,13 +155,13 @@ function onYouTubeIframeAPIReady()
 
 			onReady: function(event)
 			{
-				var sessid = $.cookie("sessid");
+				var session = $.cookie("session");
 
 				console.log("Requesting init...");
-				if (sessid === undefined)
+				if (session === undefined)
 					sendAction({ action: "init", room_id: room_id,  });
 				else
-					sendAction({ action: "init", room_id: room_id, sessid: sessid });
+					sendAction({ action: "init", room_id: room_id, session: session });
 
 				// Update player controls
 				updateStateTimeout();

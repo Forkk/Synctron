@@ -7,6 +7,8 @@ Werkzeug==0.8.3
 gevent==0.13.8
 gevent-websocket==0.3.6
 greenlet==0.4.0
+itsdangerous==0.21
+passlib==1.6.1
 requests==1.2.0
 ws4py==0.3.0-beta
 wsgiref==0.1.2

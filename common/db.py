@@ -35,13 +35,6 @@ class UserData(Base):
 	password = Column(String(160)) # Hash of user's password
 	email = Column(String(320)) # User's email address
 
-	# User's session ID.
-	session_id = Column(String(36), unique=True)
-
-	# The IP address for the current session.
-	# If a user from an IP other than this tries to use the session ID, they will be rejected.
-	session_ip = Column(String(50))
-
 	def __init__(self, name, password, email):
 		self.name = name
 		self.password = password

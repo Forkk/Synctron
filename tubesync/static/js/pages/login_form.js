@@ -37,8 +37,12 @@ $(document).ready(function()
 			{
 				if (data.success)
 				{
-					// Logged in
-					alert("Logged in with session ID " + data.sessid);
+					// Logged in. Store session ID in a cookie and redirect to the home page.
+					$.cookie("sessid", data.sessid);
+					if (loginSuccessHref !== undefined)
+						window.location.href = loginSuccessHref;
+					else
+						window.location.href = "/";
 				}
 				else
 				{

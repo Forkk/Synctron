@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from wsapi.user import UserWebSocket
+from wsapi.user import UserWebSocket, Session
 
 import sys
 import argparse
@@ -31,11 +31,19 @@ def main(argv):
 	parser.add_argument("-p", "--port", action="store", default=8889, type=int,
 		help="the port to listen on (default: %(default)s)", metavar="PORT")
 
+	parser.add_argument("-d", "--dburi", action="store", default="mysql://sync@127.0.0.1/sync",
+		help="the SQLAlchemy database URI to connect to (default: %(default)s)", metavar="DB")
+
 	args = parser.parse_args(argv[1:])
 
 	from gevent import monkey; monkey.patch_all()
 	from ws4py.server.geventserver import WSGIServer
 	from ws4py.server.wsgiutils import WebSocketWSGIApplication
+
+	from sqlalchemy import create_engine
+
+	engine = create_engine(args.dburi)
+	Session.configure(bind=engine)
 
 	print("Running WebSocket server on %s:%i..." % (args.host, args.port))
 	server = WSGIServer((args.host, args.port), WebSocketWSGIApplication(handler_cls=UserWebSocket))

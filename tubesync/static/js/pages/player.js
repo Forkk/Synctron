@@ -155,8 +155,13 @@ function onYouTubeIframeAPIReady()
 
 			onReady: function(event)
 			{
+				var sessid = $.cookie("sessid");
+
 				console.log("Requesting init...");
-				sendAction({ action: "init", room_id: room_id });
+				if (sessid === undefined)
+					sendAction({ action: "init", room_id: room_id,  });
+				else
+					sendAction({ action: "init", room_id: room_id, sessid: sessid });
 
 				// Update player controls
 				updateStateTimeout();
@@ -168,17 +173,6 @@ function onYouTubeIframeAPIReady()
 	{
 
 	}
-
-	$("#change-nick-button").click(function(evt)
-	{
-		var newNick = $("#change-nick-input").val();
-		if (newNick.length > 0)
-		{
-			console.log("Asking the server to change nick to " + newNick);
-			sendAction({ "action": "changenick", "newnick": newNick });
-		}
-		$("#change-nick-modal").modal("hide");
-	});
 
 	initWebSocket();
 };
@@ -196,26 +190,10 @@ function updateUserListTable()
 	userlistObj.forEach(function(entry, index)
 	{
 		var row = $("<tr id='ulist-" + index + "'>")
-
 		var usernameCol = $("<td class='expand'>" + entry.name + "</td>")
-
+		if (entry.isyou) row.addClass("info");
+		if (entry.isguest) row.addClass("italic");
 		row.append(usernameCol);
-
-		if (entry.isyou)
-		{
-			row.addClass("info");
-
-			var changeNameCol = $("<td></td>");
-			var changeNameBtn = $("<button type='button' class='btn btn-primary btn-mini' data-toggle='modal' data-target='#change-nick-modal'>Change</a>");
-			changeNameCol.append(changeNameBtn);
-
-			row.append(changeNameCol);
-		}
-		else
-		{
-			row.append("<td></td>");
-		}
-
 		$("#userlist-body").append(row);
 	});
 }
@@ -225,6 +203,7 @@ function addUserListEntry(data, index, shouldUpdateUserList)
 	var entry = {
 		name: data.username,
 		isyou: data.isyou,
+		isguest: data.isguest,
 	};
 	userlistObj.splice(index, 0, entry);
 

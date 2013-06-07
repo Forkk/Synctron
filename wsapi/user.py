@@ -23,7 +23,14 @@ from ws4py.websocket import WebSocket
 import json
 import time
 
+from common.db import UserData
+
 from wsapi.room import Room
+
+from sqlalchemy.orm import sessionmaker
+
+Session = sessionmaker()
+
 
 rooms = {
 	
@@ -52,11 +59,11 @@ class UserWebSocket(WebSocket):
 			"changevideo": self.action_changevideo,
 			"addvideo": self.action_addvideo,
 			"removevideo": self.action_removevideo,
-			"changenick": self.action_changenick,
 		}
 
 		# Generate a username for the user.
-		self.username = "User%i" % UserWebSocket.usercount
+		self.username = "Guest %i" % UserWebSocket.usercount
+		self.user_data = None
 		UserWebSocket.usercount += 1
 
 	def received_message(self, message):
@@ -99,6 +106,18 @@ class UserWebSocket(WebSocket):
 		if "room_id" not in data:
 			self.close(1008, "init action requires a room ID")
 			return
+
+		if "sessid" in data:
+			# If a session ID was given, attempt to load user info from the database.
+			session = Session()
+			user = session.query(UserData).filter_by(session_id=data["sessid"], session_ip=self.peer_address[0]).first()
+
+			if user is not None:
+				# User is authenticated.
+				self.user_data = user
+				self.username = user.name
+			else:
+				self.user_data = None
 
 		# If the room ID specified in data doesn't exist, we need to create it.
 		if data["room_id"] not in rooms:
@@ -183,14 +202,15 @@ class UserWebSocket(WebSocket):
 
 		self.room.remove_video(data["index"], user=self)
 
-	def action_changenick(self, data):
-		"""
-		Action for a user changing their nickname.
-		"""
+	# def action_changenick(self, data):
+	# 	"""
+	# 	Action for a user changing their nickname.
+	# 	No longer used.
+	# 	"""
 
-		print("User %s is changing their nick to %s." % (self.username, data["newnick"]));
-		self.username = data["newnick"];
-		self.room.user_list_update();
+	# 	print("User %s is changing their nick to %s." % (self.username, data["newnick"]));
+	# 	self.username = data["newnick"];
+	# 	self.room.user_list_update();
 
 
 	###################
@@ -244,6 +264,7 @@ class UserWebSocket(WebSocket):
 			"userlist": [{
 				"username": user.username,
 				"isyou": user is self,
+				"isguest": user.user_data is None,
 			} for user in self.room.users],
 		}))
 

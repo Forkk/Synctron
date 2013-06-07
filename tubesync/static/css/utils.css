@@ -46,3 +46,8 @@ th.expand
 {
 	font-family: monospace;
 }
+
+.italic
+{
+	font-style: italic;
+}

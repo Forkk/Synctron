@@ -51,3 +51,8 @@ th.expand
 {
 	font-style: italic;
 }
+
+.popover
+{
+	max-width: 1000px;
+}

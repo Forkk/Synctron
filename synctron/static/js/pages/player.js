@@ -95,30 +95,6 @@ function initWebSocket()
 
 function onYouTubeIframeAPIReady()
 {
-	// Set up UI.
-
-	var addEndFunc = function(evt)
-	{
-		var videoId = $("input#video_id").val();
-		console.log("Adding video " + videoId + " to the end of the playlist.");
-		addVideoToPlaylist(videoId);
-		evt.preventDefault();
-	}
-
-	var addNextFunc = function(evt)
-	{
-		var videoId = $("input#video_id").val();
-		console.log("Adding video " + videoId + " after the current video (" + playlist_pos + ") in the playlist.");
-		addVideoToPlaylist(videoId, playlist_pos + 1);
-		evt.preventDefault();
-	}
-
-	$("#btn-add-end").click(addEndFunc);
-	$("#menu-add-end").click(addEndFunc);
-	$("#menu-add-next").click(addNextFunc);
-	$("#videoform").submit(addEndFunc);
-
-
 	// Set up player
 	var lastState = -2;
 	vplayer = new YT.Player("player", {
@@ -163,16 +139,14 @@ function onYouTubeIframeAPIReady()
 				else
 					sendAction({ action: "init", room_id: room_id, session: session });
 
-				// Update player controls
+				// Start the update state timeout loop.
 				updateStateTimeout();
+
+				// Enable buttons.
+				enableCtrlBtns();
 			},
 		}
 	});
-
-	function updatePlayerControls()
-	{
-
-	}
 
 	initWebSocket();
 };
@@ -325,6 +299,8 @@ function addVideoToPlaylist(video, index)
 	{
 		sendAction({ action: "addvideo", video_id: vid, index: playlist_pos + 1 });
 	}
+
+	showAddVideoForm(false);
 }
 
 // Determines the given URL's video ID.
@@ -566,5 +542,93 @@ actions =
 		{
 			addUserListEntry(user);
 		});
+	}
+}
+
+
+
+////////////////////////////
+////// DOCUMENT READY //////
+////////////////////////////
+
+$(document).ready(function()
+{
+	//// Initialize toolbar buttons. ////
+
+	// Set tooltips.
+	$("#room-toolbar button").tooltip({
+		placement: "top",
+		container: "#room-toolbar",
+	});
+
+	// Add video popover.
+	$("#addvideo-btn").popover({
+		html: true,
+		placement: "right",
+		trigger: "manual",
+		title: "Add Video",
+		content: $("#add-video-popover").html(),
+		container: "#room-toolbar",
+	});
+	$("#add-video-popover").remove(); // At this point, we don't need this anymore.
+
+	// Handlers
+	$("#addvideo-btn").click(function(evt)
+	{
+		var show = !$("#addvideo-btn").hasClass("active");
+		showAddVideoForm(show);
+	});
+
+	$("#resync-btn").click(function(evt)
+	{
+		console.log("Requesting sync...");
+		sendAction({ action: "sync", });
+	});
+});
+
+function showAddVideoForm(show)
+{
+	if (show === undefined || show)
+	{
+		$("#addvideo-btn").addClass("active");
+		$("#addvideo-btn").popover("show");
+
+		var addEndFunc = function(evt)
+		{
+			var videoId = $("input#video_id").val();
+			console.log("Adding video " + videoId + " to the end of the playlist.");
+			addVideoToPlaylist(videoId);
+			evt.preventDefault();
+		}
+
+		var addNextFunc = function(evt)
+		{
+			var videoId = $("input#video_id").val();
+			console.log("Adding video " + videoId + " after the current video (" + playlist_pos + ") in the playlist.");
+			addVideoToPlaylist(videoId, playlist_pos + 1);
+			evt.preventDefault();
+		}
+
+		$("#btn-add-end").click(addEndFunc);
+		$("#menu-add-end").click(addEndFunc);
+		$("#menu-add-next").click(addNextFunc);
+		$("#videoform").submit(addEndFunc);
+	}
+	else
+	{
+		$("#addvideo-btn").removeClass("active");
+		$("#addvideo-btn").popover("hide");
+	}
+}
+
+function enableCtrlBtns(enable)
+{
+	if (enable === undefined || enable === true)
+	{
+		$("#room-toolbar button").removeClass("disabled");
+	}
+	else
+	{
+		$("#room-toolbar button").addClass("disabled");
 	}
 }

@@ -23,15 +23,34 @@
 	<div class="span8">
 		<div id="player-div" class="well well-small center-contents">
 			<div id="player" class="center"></div>
+			<div class="btn-toolbar" id="room-toolbar">
+				<div class="btn-group pull-left">
+					<button class="btn disabled" id="addvideo-btn" title="Add a video to the playlist"><i class="icon-plus"></i></button>
+					<button class="btn disabled" id="resync-btn" title="Re-synchronize the video"><i class="icon-refresh"></i></button>
+				</div>
+
+				<div class="btn-group">
+					<button class="btn disabled" id="next-btn" title="Skip to the previous video"><i class="icon-fast-backward"></i></button>
+					<button class="btn disabled" id="prev-btn" title="Skip to the next video"><i class="icon-fast-forward"></i></button>
+				</div>
+
+				<div class="btn-group pull-right">
+					<button class="btn disabled dropdown-toggle" id="menu-btn" title="More options" data-toggle="dropdown">
+						<i class="icon-wrench"></i>
+					</button>
+					<ul class="dropdown-menu">
+						<li><a href="#" id="resync-all-btn"><i class="icon-refresh"></i> Re-sync Everyone</a></li>
+						<li><a href="#" id="room-settings-btn"><i class="icon-cog"></i> Room Settings</a></li>
+					</ul>
+				</div>
+			</div>
 		</div>
 
-		<div class="well">
+		<div id="add-video-popover" class="hide">
 			<form name="videoform" id="videoform" action="javascript:void(0);" class="form-inline">
 				<fieldset>
-					<legend>Add Videos</legend>
-
 					<div class="input-append">
-						<input type="text" name="video_id" id="video_id" class="input-xlarge" placeholder="YouTube video URL or ID..." />
+						<input type="text" name="video_id" id="video_id" placeholder="YouTube video URL or ID..." />
 
 						<div class="btn-group">
 							<button type="button" class="btn" id="btn-add-end" href="#">Add Video</button>

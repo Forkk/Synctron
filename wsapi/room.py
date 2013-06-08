@@ -186,9 +186,14 @@ class Room:
 			# but we need to set the playing video to the one at the new current position.
 			self.change_video(self.playlist_position);
 
-	def change_video(self, index, user=None):
+	def change_video(self, index, user=None, time_padding=3):
 		"""
 		Changes the current position in the playlist to the given index.
+		time_padding specifies how many seconds of "padding" should be added (defaults to 3 seconds).
+		Time padding here is meant to prevent the case where the client syncs a few seconds after the
+		server starts "playing" the video, causing the video to start a few seconds after the actual
+		beginning of the video. This is prevented by setting the server's last_position to 
+		-time_padding when the video starts.
 		"""
 
 		print("%s changed playlist position in room %s to %i." % (user, self.room_id, index))
@@ -197,7 +202,7 @@ class Room:
 
 		self.update_video_timer(0)
 
-		self.last_position = 0
+		self.last_position = -time_padding
 		self.start_time = int(time.time())
 		self.is_playing = True
 		[user.send_setvideo() for user in self.users]
@@ -209,10 +214,14 @@ class Room:
 		# Increment playlist position.
 		self.change_video(self.playlist_position + 1)
 
-	def update_video_timer(self, elapsed_time=None):
+	def update_video_timer(self, elapsed_time=None, time_padding=5):
 		"""
 		Cancels the existing video timer and resets it to go off at the end of the video.
 		If elapsed_time is not none, the value of elapsed_time will be used instead of the current_pos property.
+		time_padding is how many seconds of "padding" should be added (defaults to 5 seconds).
+		The timer will be set to the time remaining in the video plus time_padding. This is done to help 
+		prevent the video from being switched to the next video before the video ends. Often, the server will
+		think the video has ended before it has ended for everyone else. Time padding helps prevent this.
 		"""
 		# Set the video timer to the duration of the video.
 		if self.video_timer is not None:
@@ -229,7 +238,7 @@ class Room:
 			return
 
 		# Set the timer to go off when the video ends.
-		time_remaining = self.current_video["duration"] - (self.current_pos if elapsed_time is None else elapsed_time)
+		time_remaining = self.current_video["duration"] - (self.current_pos if elapsed_time is None else elapsed_time) + 5
 		print("Setting video timer for %i seconds." % time_remaining)
 		self.video_timer = Timer(time_remaining, self.video_ended)
 		self.video_timer.start()

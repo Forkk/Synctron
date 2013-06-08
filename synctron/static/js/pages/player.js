@@ -143,7 +143,7 @@ function onYouTubeIframeAPIReady()
 				updateStateTimeout();
 
 				// Enable buttons.
-				enableCtrlBtns();
+				enableToolbarBtns();
 			},
 		}
 	});
@@ -249,6 +249,8 @@ function updatePlaylistElement()
 
 		$("#playlist-body").append(row);
 	});
+
+	updateSkipButtonsState();
 }
 
 // Adds a new playlist entry for the given video ID.
@@ -609,6 +611,19 @@ $(document).ready(function()
 		sendAction({ action: "sync", });
 	});
 
+	// Next/prev buttons.
+	$("#next-btn").click(function(evt)
+	{
+		if (playlist_pos+1 < playlistObj.length)
+			sendAction({ action: "changevideo", index: playlist_pos + 1, });
+	});
+
+	$("#prev-btn").click(function(evt)
+	{
+		if (playlist_pos > 0)
+			sendAction({ action: "changevideo", index: playlist_pos - 1, });
+	});
+
 	// Chat input form
 	$("#chat-input-form").submit(function(evt)
 	{
@@ -659,15 +674,41 @@ function showAddVideoForm(show)
 	}
 }
 
-function enableCtrlBtns(enable)
+var toolbarBtnsEnabled = false;
+
+function enableToolbarBtns(enable)
 {
-	if (enable === undefined || enable === true)
+	toolbarBtnsEnabled = enable === undefined || enable;
+	updateToolbarState();
+}
+
+// Updates the state of all the toolbar buttons.
+function updateToolbarState()
+{
+	// Enable / disable all buttons except those that need exra processing.
+	var btns = $("#room-toolbar button:not(#next-btn):not(#prev-btn)");
+	setElementEnabled(btns, toolbarBtnsEnabled);
+
+	// Now, do extra processing for special cases such as buttons that need
+	// to be enabled/disabled based on other factors.
+	updateSkipButtonsState();
+}
+
+// Updates the state of the skip to next and skip to previous buttons.
+function updateSkipButtonsState()
+{
+	if (toolbarBtnsEnabled)
 	{
-		$("#room-toolbar button").removeClass("disabled");
+		// If we're at or past the end of the playlist, disable the "next video" button.
+		 setElementEnabled($("#next-btn"), (playlist_pos+1 < playlistObj.length));
+
+		 // If we're at or past the beginning of the playlist, disable the "previous video" button.
+		 setElementEnabled($("#prev-btn"), (playlist_pos > 0));
 	}
 	else
 	{
-		$("#room-toolbar button").addClass("disabled");
+		// If toolbar buttons aren't enabled, just disable them.
+		setElementEnabled($("#next-btn,#prev-btn"), false);
 	}
 }
 

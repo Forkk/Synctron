@@ -98,3 +98,11 @@ function getHTTPErrorMsg(httpCode)
 		return "Got an unknown HTTP error " + httpCode + ".";
 	}
 }
+
+
+// Enables/disables the given element(s). Enabling/disabling is done by adding/removing the "disabled" class.
+function setElementEnabled(element, enabled)
+{
+	if (enabled) element.removeClass("disabled");
+	else element.addClass("disabled");
+}

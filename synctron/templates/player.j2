@@ -2,6 +2,53 @@
 
 {% block title %}{{ room_id }} - Synctron{% endblock %}
 
+{% block css_head %}
+{{ super() }}
+<style>
+
+#chatbox
+{
+	height: 100%;
+}
+
+#chatbox-textarea
+{
+	height: 178px;
+	overflow-y: scroll;
+}
+
+#chatbox-textarea p
+{
+	margin-top: 0px;
+	margin-bottom: 0px;
+	line-height: 1.4;
+
+	word-wrap: break-word;
+}
+
+
+#playlist-scroll
+{
+	min-height: 100px;
+	overflow-y: scroll;
+}
+
+#userlist-scroll
+{
+	height: 140px;
+	overflow-y: scroll;
+
+	margin-bottom: 20px;
+}
+
+#player
+{
+	height: 333px;
+}
+
+</style>
+{% endblock %}
+
 {% block js_head %}
 {{ super() }}
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -14,10 +61,6 @@
 {% endblock %}
 
 {% block content %}
-
-<div class="row">
-	<div class="page-header"><h1>{{ room_id }} <small>Synctron</small></h1></div>
-</div>
 
 <div class="row">
 	<div class="span8">
@@ -66,43 +109,58 @@
 				</fieldset>
 			</form>
 		</div>
-
-		<table class="table table-hover table-condensed table-bordered playlist-table">
-			<colgroup>
-				<col width="48%" />
-				<col width="24%" />
-				<col width="11%" />
-				<col width="17%" />
-				<col width="24px" />
-			</colgroup>
-
-			<thead>
-				<tr>
-					<th class="expand">Title</th>
-					<th>Author</th>
-					<th>Time</th>
-					<th>Video ID</th>
-					<th>
-				</tr>
-			</thead>
-
-			<tbody id="playlist-body">
-			</tbody>
-		</table>
 	</div>
 
 	<div class="span4">
-		<table class="table table-hover table-condensed table-bordered">
-			<thead>
-				<tr><th>Users</th></tr>
-			</thead>
+		<div id="userlist-scroll">
+			<table class="table table-hover table-condensed table-bordered">
+				<thead>
+					<tr><th>Users</th></tr>
+				</thead>
 
-			<tbody id="userlist-body">
-			</tbody>
-		</table>
+				<tbody id="userlist-body">
+				</tbody>
+			</table>
+		</div>
 
-		<div class="well">
-			<p>Chat is not yet implemented.</p>
+		<div id="chatbox">
+			<div class="well well-small" id="chatbox-textarea">
+			</div>
+
+			<div>
+				<form id="chat-input-form" class="form-inline">
+					<input type="text" id="chat-input" class="input-block-level" name="chat-input" placeholder="Chat message...">
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="row">
+	<div class="span12">
+		<div id="playlist-scroll">
+			<table class="table table-hover table-condensed table-bordered playlist-table">
+				<colgroup>
+					<col width="48%" />
+					<col width="24%" />
+					<col width="11%" />
+					<col width="17%" />
+					<col width="24px" />
+				</colgroup>
+
+				<thead>
+					<tr>
+						<th class="expand">Title</th>
+						<th>Author</th>
+						<th>Time</th>
+						<th>Video ID</th>
+						<th>
+					</tr>
+				</thead>
+
+				<tbody id="playlist-body">
+				</tbody>
+			</table>
 		</div>
 	</div>
 </div>

@@ -63,6 +63,7 @@ class UserWebSocket(WebSocket):
 			"changevideo": self.action_changevideo,
 			"addvideo": self.action_addvideo,
 			"removevideo": self.action_removevideo,
+			"chatmsg": self.action_chatmsg,
 		}
 
 		# Generate a username for the user.
@@ -210,6 +211,14 @@ class UserWebSocket(WebSocket):
 
 		self.room.remove_video(data["index"], user=self)
 
+	def action_chatmsg(self, data):
+		"""
+		Posts a chat message from this user to the room.
+		"""
+		# There's no need to sanitize the message to make sure it doesn't have HTML here.
+		# This is done client-side before the message is added to the chat box.
+		self.room.post_chat_message(data["message"], self)
+
 	# def action_changenick(self, data):
 	# 	"""
 	# 	Action for a user changing their nickname.
@@ -297,6 +306,13 @@ class UserWebSocket(WebSocket):
 			"reason": reason_id,
 			"reason_msg": reason_msg if reason_msg else reason_id,
 		}))
+
+	def send_chatmsg(self, sender, message):
+		self.send(json.dumps({
+			"action": "chatmsg",
+			"sender": sender.username,
+			"message": message,
+		}));
 
 
 	###############

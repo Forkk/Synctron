@@ -507,6 +507,9 @@ actions =
 			console.log("Requesting sync...");
 			sendAction({ action: "sync", });
 		}, (1*1000));
+
+		// Update the playlist height to make sure the layout works.
+		updatePlaylistHeight();
 	},
 
 	// Handles the sync action sent from the server.
@@ -542,7 +545,28 @@ actions =
 		{
 			addUserListEntry(user);
 		});
-	}
+	},
+
+	chatmsg: function(data, sock)
+	{
+		var chatbox = $("#chatbox-textarea");
+
+		// Determine whether or not we're going to want to scroll to the bottom after we append the message.
+		var distFromBottom = (chatbox[0].scrollHeight - chatbox.scrollTop()) - chatbox.outerHeight();
+		var scrollToBottom = Math.abs(distFromBottom) <= 5;
+
+		// First, we need to make sure any HTML tags are escaped.
+		var escapedMsg = $("<div/>").text(data.message).html();
+
+		// Now, we create a <p> element for the message and append it to the chat box.
+		var msgElement = $("<p><b>" + data.sender + ":</b>&nbsp;" + escapedMsg + "</p>")
+		chatbox.append(msgElement);
+
+		// Finally, if the chatbox was scrolled to the bottom before,
+		// we need to scroll it back to the bottom because we've added a new line.
+		if (scrollToBottom)
+			chatbox.scrollTop(chatbox[0].scrollHeight);
+	},
 }
 
 
@@ -583,6 +607,20 @@ $(document).ready(function()
 	{
 		console.log("Requesting sync...");
 		sendAction({ action: "sync", });
+	});
+
+	// Chat input form
+	$("#chat-input-form").submit(function(evt)
+	{
+		evt.preventDefault();
+		sendAction({ action: "chatmsg", message: $("#chat-input").val(), })
+		$("#chat-input").val("");
+	});
+
+	// Handle window resize
+	$(window).resize(function(evt)
+	{
+		updatePlaylistHeight();
 	});
 });
 
@@ -631,4 +669,19 @@ function enableCtrlBtns(enable)
 	{
 		$("#room-toolbar button").addClass("disabled");
 	}
+}
+
+function updatePlaylistHeight()
+{
+	var plistScroll = $("#playlist-scroll");
+	var minHeight = plistScroll.css("min-height");
+
+	// Simply resize the playlist's scroll div to fit the available screen space.
+	var availableSpace = $(window).height() - plistScroll.offset().top - 20;
+
+	// If the space available is greater than the minimum size of the div, resize it to fit the space.
+	if (availableSpace <= minHeight)
+		plistScroll.height(minHeight);
+	else
+		plistScroll.height(availableSpace);
 }

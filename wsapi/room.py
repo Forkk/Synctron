@@ -265,6 +265,17 @@ class Room:
 		self.user_list_update()
 
 
+	#### CHAT STUFF ####
+
+	def post_chat_message(self, message, user, force_post=False):
+		"""
+		Posts the given message in chat from the given user.
+		Does nothing if message is empty, unless force_post is set to true True.
+		"""
+		if len(message) > 0 or force_post:
+			[user.send_chatmsg(user, message) for user in self.users]
+
+
 	################
 	# CALCULATIONS #
 	################

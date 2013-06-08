@@ -49,15 +49,11 @@
 </style>
 {% endblock %}
 
-{% block js_head %}
-{{ super() }}
-<script src="https://www.youtube.com/iframe_api"></script>
-{% endblock %}
-
 {% block js_body %}
 {{ super() }}
 <script type="text/javascript">room_id = "{{ room_id }}"; wsapi_url = "{{ wsapi_url }}";</script>
 <script type="text/javascript" src="/static/js/pages/player.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
 {% endblock %}
 
 {% block content %}

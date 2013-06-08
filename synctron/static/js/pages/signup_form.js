@@ -81,7 +81,8 @@ $(document).ready(function()
 				{
 					if (data.success)
 					{
-						
+						alert("Account creation successful. Please log in.");
+						window.location.href = "/";
 					}
 					else
 					{

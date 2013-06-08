@@ -174,6 +174,7 @@ function updateUserListTable()
 		row.append(usernameCol);
 		$("#userlist-body").append(row);
 	});
+	$("#userlist-title").text(userlistObj.length.toString() + " Users");
 }
 
 function addUserListEntry(data, index, shouldUpdateUserList)

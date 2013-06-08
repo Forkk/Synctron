@@ -282,7 +282,7 @@ class Room:
 		Does nothing if message is empty, unless force_post is set to true True.
 		"""
 		if len(message) > 0 or force_post:
-			[user.send_chatmsg(user, message) for user in self.users]
+			[sendto.send_chatmsg(user, message) for sendto in self.users]
 
 
 	################

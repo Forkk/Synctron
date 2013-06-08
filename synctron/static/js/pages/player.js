@@ -90,6 +90,10 @@ function initWebSocket()
 	ws.onclose = function(evt)
 	{
 		console.log("WebSocket closed.");
+		var alertDiv = $("<div class='alert alert-error hide'>");
+		alertDiv.html("<b>Error:</b> Lost connection to the synchronization server. Try refreshing the page in a few seconds.");
+		$("#main-container").prepend(alertDiv);
+		alertDiv.slideDown();
 	}
 }
 

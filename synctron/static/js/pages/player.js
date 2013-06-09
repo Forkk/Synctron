@@ -168,9 +168,35 @@ function updateUserListTable()
 	userlistObj.forEach(function(entry, index)
 	{
 		var row = $("<tr id='ulist-" + index + "'>")
+		var typeCol = $("<td>");
 		var usernameCol = $("<td class='expand'>" + entry.name + "</td>")
+
+
 		if (entry.isyou) row.addClass("info");
 		if (entry.isguest) row.addClass("italic");
+
+
+		typeColIcon = $("<i>");
+
+		if (entry.isowner)
+		{
+			typeColIcon.addClass("icon-star");
+			typeCol.attr("title", "Room Owner");
+		}
+		else
+		{
+			typeColIcon.addClass("icon-user");
+			typeCol.attr("title", " Normal User");
+		}
+
+		typeCol.append(typeColIcon);
+		typeCol.tooltip({
+			placement: "left",
+			container: "#userlist-scroll",
+			trigger: "hover",
+		});
+
+		row.append(typeCol);
 		row.append(usernameCol);
 		$("#userlist-body").append(row);
 	});
@@ -183,6 +209,7 @@ function addUserListEntry(data, index, shouldUpdateUserList)
 		name: data.username,
 		isyou: data.isyou,
 		isguest: data.isguest,
+		isowner: data.isowner,
 	};
 	userlistObj.splice(index, 0, entry);
 

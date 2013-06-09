@@ -64,6 +64,9 @@ class Room:
 		# This is used to figure out when we should go to the next video in the playlist.
 		self.video_timer = None
 
+		# The username of the room's owner.
+		self.owner = None
+
 	##############
 	# OPERATIONS #
 	##############
@@ -271,7 +274,30 @@ class Room:
 		"""
 		print("%s left room %s." % (user, self.room_id))
 		self.users.remove(user)
+
+		# If the user was the room owner and he was a guest, pick a new owner.
+		if user.is_owner and user.is_guest:
+			if len(self.users) > 0:
+				# Pick the first non-guest in the room.
+				owner_candidates = [user for user in self.users if not user.is_guest]
+				if len(owner_candidates) <= 0:
+					# If no non-guests can be found in the room, pick the first guest.
+					owner_candidates = self.users
+				self.set_room_owner(owner_candidates[0])
+			else:
+				# If no new owner candidates can be found, set the owner to None.
+				# A new owner will be assigned when someone joins.
+				self.owner = None
+
 		self.user_list_update()
+
+	def set_room_owner(self, user):
+		"""
+		Sets the given user as the room owner.
+		The room owner has all permissions in the room.
+		"""
+		print("%s is now the owner in room %s." % (user, self.room_id))
+		self.owner = user.username
 
 
 	#### CHAT STUFF ####

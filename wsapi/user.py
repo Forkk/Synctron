@@ -131,6 +131,8 @@ class UserWebSocket(WebSocket):
 		# If the room ID specified in data doesn't exist, we need to create it.
 		if data["room_id"] not in rooms:
 			rooms[data["room_id"]] = Room(data["room_id"])
+		if len(rooms[data["room_id"]].users) <= 0 and rooms[data["room_id"]].owner is None:
+			rooms[data["room_id"]].set_room_owner(self)
 
 		# Set self.room to the room we're joining.
 		self.room = rooms[data["room_id"]]
@@ -281,7 +283,8 @@ class UserWebSocket(WebSocket):
 			"userlist": [{
 				"username": user.username,
 				"isyou": user is self,
-				"isguest": user.user_data is None,
+				"isguest": user.is_guest,
+				"isowner": user.is_owner,
 			} for user in self.room.users],
 		}))
 
@@ -318,6 +321,16 @@ class UserWebSocket(WebSocket):
 	###############
 	# OTHER STUFF #
 	###############
+
+	@property
+	def is_owner(self):
+		"""Returns true if the user is the owner of the room it's in."""
+		return self.room.owner == self.username
+
+	@property
+	def is_guest(self):
+		"""Returns true if the user is a guest."""
+		return self.user_data is None
 
 	def __str__(self):
 		return "%s (%s)" % (self.username, self.peer_address[0])

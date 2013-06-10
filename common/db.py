@@ -18,11 +18,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Table, Column, Integer, String, Boolean, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.orderinglist import ordering_list
 
 Base = declarative_base()
 
+
+admin_association_table = Table("admins", Base.metadata,
+	Column("user_id", Integer, ForeignKey("users.id")),
+	Column("room_id", Integer, ForeignKey("rooms.id"))
+)
 
 class UserData(Base):
 	"""
@@ -35,7 +42,52 @@ class UserData(Base):
 	password = Column(String(160)) # Hash of user's password
 	email = Column(String(320)) # User's email address
 
+	owned_rooms = relationship("RoomData", backref="owner") # Rooms this user owns.
+
 	def __init__(self, name, password, email):
 		self.name = name
 		self.password = password
 		self.email = email
+
+class RoomData(Base):
+	"""
+	Class representing information about a room as it is stored in the database.
+	"""
+	__tablename__ = "rooms"
+
+	id = Column(Integer, primary_key=True) # Room ID number.
+	name = Column(String(20), unique=True) # Room name. This is a unique string with no spaces.
+
+	owner_id = Column(Integer, ForeignKey("users.id")) # The owner of the room.
+
+	playlist = relationship("PlaylistEntry", order_by="PlaylistEntry.position",  # Videos in this room's playlist.
+							collection_class=ordering_list("position"))
+	playlist_pos = Column(Integer) # The currently playing video in the playlist.
+
+	admins = relationship("UserData", secondary=admin_association_table)
+
+
+	## Room Settings ##
+	users_can_pause =	Column(Boolean, default=1)
+	users_can_skip =	Column(Boolean, default=1)
+	users_can_add =		Column(Boolean, default=1)
+	users_can_remove =	Column(Boolean, default=1)
+
+	def __init__(self, name):
+		self.name = name
+		self.playlist_pos = 0
+
+class PlaylistEntry(Base):
+	"""
+	Class representing an entry in a room's playlist.
+	"""
+	__tablename__ = "playlist_entries"
+
+	id = Column(Integer, primary_key=True) # Entry ID number.
+	video_id = Column(String(15)) # The video's YouTube video ID.
+	position = Column(Integer) # The position of the video in the playlist.
+
+	room_id = Column(Integer, ForeignKey("rooms.id")) # The ID of the room this entry belongs to.
+
+	def __init__(self, vid):
+		self.video_id = vid

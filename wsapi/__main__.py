@@ -18,7 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from wsapi.user import UserWebSocket, Session
+from wsapi import Session
+from wsapi.user import UserWebSocket
 
 import sys
 import argparse

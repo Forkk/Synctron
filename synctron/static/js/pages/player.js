@@ -183,6 +183,11 @@ function updateUserListTable()
 			typeColIcon.addClass("icon-star");
 			typeCol.attr("title", "Room Owner");
 		}
+		else if (entry.isadmin)
+		{
+			typeColIcon.addClass("icon-star-empty");
+			typeCol.attr("title", "Room Admin");
+		}
 		else
 		{
 			typeColIcon.addClass("icon-user");
@@ -209,6 +214,7 @@ function addUserListEntry(data, index, shouldUpdateUserList)
 		name: data.username,
 		isyou: data.isyou,
 		isguest: data.isguest,
+		isadmin: data.isadmin,
 		isowner: data.isowner,
 	};
 	userlistObj.splice(index, 0, entry);

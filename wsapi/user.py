@@ -26,13 +26,10 @@ import time
 
 from common.db import UserData
 
-from wsapi.room import Room
+from wsapi import Session
+from wsapi.room import Room, load_room_data
 	
-from sqlalchemy.orm import sessionmaker
-
 from werkzeug.contrib.securecookie import SecureCookie
-
-Session = sessionmaker()
 
 rooms = {
 	
@@ -120,6 +117,7 @@ class UserWebSocket(WebSocket):
 			if "username" in session_data:
 				dbsession = Session()
 				user = dbsession.query(UserData).filter_by(name=session_data["username"]).first()
+				dbsession.close()
 
 			if user is not None:
 				# User is authenticated.
@@ -130,7 +128,7 @@ class UserWebSocket(WebSocket):
 
 		# If the room ID specified in data doesn't exist, we need to create it.
 		if data["room_id"] not in rooms:
-			rooms[data["room_id"]] = Room(data["room_id"])
+			rooms[data["room_id"]] = load_room_data(data["room_id"])
 		if len(rooms[data["room_id"]].users) <= 0 and rooms[data["room_id"]].owner is None:
 			rooms[data["room_id"]].set_room_owner(self)
 
@@ -262,15 +260,19 @@ class UserWebSocket(WebSocket):
 		"""Sends a playlistupdate action to the client."""
 		self.send(json.dumps({
 			"action": "playlistupdate",
+
 			# List of objects containing video info.
 			# Yes, we could just pass the item dicts directly, but we want to make it pass only what is necessary.
 			# This way, if we add something to the playlist entry dicts, it won't be automatically passed through this.
-			"playlist": [{
-				"video_id": item["video_id"],
-				"title": item["title"],
-				"author": item["author"],
-				"duration": item["duration"],
-			} for item in self.room.playlist],
+			"playlist": [
+				{
+					"video_id": item["video_id"],
+					"title": item["title"],
+					"author": item["author"],
+					"duration": item["duration"],
+				}
+			for item in self.room.playlist],
+
 			"playlist_position": self.room.playlist_position,
 		}))
 
@@ -284,6 +286,7 @@ class UserWebSocket(WebSocket):
 				"username": user.username,
 				"isyou": user is self,
 				"isguest": user.is_guest,
+				"isadmin": user.is_admin,
 				"isowner": user.is_owner,
 			} for user in self.room.users],
 		}))
@@ -325,7 +328,21 @@ class UserWebSocket(WebSocket):
 	@property
 	def is_owner(self):
 		"""Returns true if the user is the owner of the room it's in."""
-		return self.room.owner == self.username
+		if self.is_guest:
+			return False
+		return self.room.owner.id == self.user_data.id
+
+	@property
+	def is_admin(self):
+		"""Returns true if the user is an admin in the room it's in."""
+		if self.is_guest:
+			return False
+		if self.is_owner:
+			return True
+		for admin in self.room.admins:
+			if admin.id == self.user_data.id:
+				return True
+		return False
 
 	@property
 	def is_guest(self):

@@ -27,7 +27,7 @@ import time
 from common.db import UserData
 
 from wsapi import Session, config
-from wsapi.room import Room, load_room_data
+from wsapi.room import Room
 	
 from common.sessioninterface import read_session_data
 
@@ -63,7 +63,7 @@ class UserWebSocket(WebSocket):
 
 		# Generate a username for the user.
 		self.username = "Guest %i" % UserWebSocket.usercount
-		self.user_data = None
+		self.user_id = None
 		UserWebSocket.usercount += 1
 
 	def received_message(self, message):
@@ -88,7 +88,7 @@ class UserWebSocket(WebSocket):
 			self.actions[action](data)
 
 	def closed(self, code, reason=None):
-		if self.room:
+		if self.room and self in self.room.users:
 			self.room.remove_user(self)
 
 
@@ -107,34 +107,34 @@ class UserWebSocket(WebSocket):
 			self.close(1008, "init action requires a room ID")
 			return
 
+		session = Session()
 		if "session" in data:
 			# If a session was given, attempt to read it and load user info from the database.
 			user = None
 			session_data = read_session_data(data["session"], config.get("SECRET_KEY"))
 
 			if session_data is not None and "username" in session_data:
-				dbsession = Session()
-				user = dbsession.query(UserData).filter_by(name=session_data["username"]).first()
-				dbsession.close()
+				user = session.query(UserData).filter_by(name=session_data["username"]).first()
 
 			if user is not None:
 				# User is authenticated.
-				self.user_data = user
+				self.user_id = user.id
 				self.username = user.name
 			else:
-				self.user_data = None
+				self.user_id = None
 
-		# If the room ID specified in data doesn't exist, we need to create it.
+		# If the room ID specified in data doesn't exist, we need to create/load it.
 		if data["room_id"] not in rooms:
-			rooms[data["room_id"]] = load_room_data(data["room_id"])
-		if len(rooms[data["room_id"]].users) <= 0 and rooms[data["room_id"]].owner is None:
+			self.room = rooms[data["room_id"]] = Room(data["room_id"])
+		if len(rooms[data["room_id"]].users) <= 0 and rooms[data["room_id"]].get_room_owner(session) is None:
 			rooms[data["room_id"]].set_room_owner(self)
 
 		# Set self.room to the room we're joining.
 		self.room = rooms[data["room_id"]]
 
 		# Add the user to the room.
-		self.room.add_user(self)
+		self.room.add_user(self, session)
+		session.close()
 
 	def action_sync(self, data):
 		"""
@@ -240,22 +240,25 @@ class UserWebSocket(WebSocket):
 			"is_playing": self.room.is_playing,
 		}))
 
-	def send_setvideo(self):
+	def send_setvideo(self, room_data=None):
 		"""Sends a setvideo action to the client."""
-		current_video = self.room.current_video
+		if room_data is None: room_data = self.room.get_room_data()
+
+		current_video = self.room.get_current_video(room_data)
 
 		self.send(json.dumps({
 			"action": "setvideo",
 			# The service that the video is playing from. Only YouTube is supported currently.
 			"video_service": self.room.video_service, 
 			# The ID of the video that's playing. Currently just a test.
-			"video_id": "" if current_video is None else current_video["video_id"],
+			"video_id": "" if current_video is None else current_video.video_id,
 			# The index of the currently playing video in the playlist.
-			"playlist_pos": self.room.playlist_position,
+			"playlist_pos": room_data.playlist_pos,
 		}))
 
-	def send_playlistupdate(self):
+	def send_playlistupdate(self, room_data=None):
 		"""Sends a playlistupdate action to the client."""
+		if room_data is None: room_data = self.room.get_room_data()
 		self.send(json.dumps({
 			"action": "playlistupdate",
 
@@ -269,24 +272,30 @@ class UserWebSocket(WebSocket):
 					"author": item["author"],
 					"duration": item["duration"],
 				}
-			for item in self.room.playlist],
+			for item in self.room.get_playlist_info(room_data)],
 
-			"playlist_position": self.room.playlist_position,
+			"playlist_position": room_data.playlist_pos,
 		}))
 
-	def send_userlistupdate(self):
+	def send_userlistupdate(self, session, room_data=None):
 		"""Sends a userlistupdate action to the client."""
+		if room_data is None: room_data = self.room.get_room_data(session)
+
+		def uinfo_dict(user):
+			user_data = user.get_user_data(session)
+			return {
+				"username": user.username,
+				"isyou": user is self,
+				"isguest": user.is_guest(),
+				"isadmin": user.is_admin(room_data, user_data),
+				"isowner": user.is_owner(room_data, user_data),
+			}
+
 		self.send(json.dumps({
 			"action": "userlistupdate",
 			# List of objects containing user info.
 			# See the comment in the above send_playlistupdate for the reason why it's done like this.
-			"userlist": [{
-				"username": user.username,
-				"isyou": user is self,
-				"isguest": user.is_guest,
-				"isadmin": user.is_admin,
-				"isowner": user.is_owner,
-			} for user in self.room.users],
+			"userlist": [uinfo_dict(user) for user in self.room.users],
 		}))
 
 	def send_nickupdate(self, newname=None):
@@ -323,29 +332,34 @@ class UserWebSocket(WebSocket):
 	# OTHER STUFF #
 	###############
 
-	@property
-	def is_owner(self):
+	def is_owner(self, room_data, user_data):
 		"""Returns true if the user is the owner of the room it's in."""
-		if self.is_guest:
+		if self.is_guest():
 			return False
-		return self.room.owner.id == self.user_data.id
+		return room_data.owner_id == self.user_id
 
-	@property
-	def is_admin(self):
+	def is_admin(self, room_data, user_data):
 		"""Returns true if the user is an admin in the room it's in."""
-		if self.is_guest:
+		if self.is_guest():
 			return False
-		if self.is_owner:
+		if self.is_owner(room_data, user_data):
 			return True
-		for admin in self.room.admins:
-			if admin.id == self.user_data.id:
+		for admin in room_data.admins:
+			if admin.id == self.user_id:
 				return True
 		return False
 
-	@property
 	def is_guest(self):
 		"""Returns true if the user is a guest."""
-		return self.user_data is None
+		return self.user_id is None
+
+	def get_user_data(self, session):
+		"""
+		Uses the given session to get the user data for this user from the database and returns it.
+		If session is None, a session will be created automatically.
+		"""
+		if self.user_id is None: return None
+		return session.query(UserData).filter_by(id=self.user_id).first()
 
 	def __str__(self):
 		return "%s (%s)" % (self.username, self.peer_address[0])

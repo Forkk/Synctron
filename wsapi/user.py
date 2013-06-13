@@ -29,7 +29,7 @@ from common.db import UserData
 from wsapi import Session
 from wsapi.room import Room, load_room_data
 	
-from werkzeug.contrib.securecookie import SecureCookie
+from common.sessioninterface import read_session_data
 
 rooms = {
 	
@@ -112,7 +112,7 @@ class UserWebSocket(WebSocket):
 		if "session" in data:
 			# If a session was given, attempt to read it and load user info from the database.
 			user = None
-			session_data = SecureCookie.unserialize(data["session"], UserWebSocket.secret_key)
+			session_data = read_session_data(data["session"], UserWebSocket.secret_key)
 
 			if "username" in session_data:
 				dbsession = Session()

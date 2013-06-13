@@ -26,7 +26,7 @@ import time
 
 from common.db import UserData
 
-from wsapi import Session
+from wsapi import Session, config
 from wsapi.room import Room, load_room_data
 	
 from common.sessioninterface import read_session_data
@@ -41,8 +41,6 @@ rooms = {
 
 class UserWebSocket(WebSocket):
 	usercount = 0
-
-	secret_key = ""
 
 	#######################
 	# WEBSOCKET FUNCTIONS #
@@ -112,9 +110,9 @@ class UserWebSocket(WebSocket):
 		if "session" in data:
 			# If a session was given, attempt to read it and load user info from the database.
 			user = None
-			session_data = read_session_data(data["session"], UserWebSocket.secret_key)
+			session_data = read_session_data(data["session"], config.get("SECRET_KEY"))
 
-			if "username" in session_data:
+			if session_data is not None and "username" in session_data:
 				dbsession = Session()
 				user = dbsession.query(UserData).filter_by(name=session_data["username"]).first()
 				dbsession.close()

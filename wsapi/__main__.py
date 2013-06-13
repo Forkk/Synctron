@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from wsapi import Session
+from wsapi import Session, config
 from wsapi.user import UserWebSocket
 
 import sys
@@ -32,10 +32,11 @@ def main(argv):
 	parser.add_argument("-p", "--port", action="store", default=8889, type=int,
 		help="the port to listen on (default: %(default)s)", metavar="PORT")
 
-	parser.add_argument("-d", "--dburi", action="store", default="mysql://sync@127.0.0.1/sync",
-		help="the SQLAlchemy database URI to connect to (default: %(default)s)", metavar="DB")
-	parser.add_argument("-k", "--key", action="store", default="defaultsecretthatshouldbechangedwhenusedinproduction",
-		help="the secret key that will be used to deserialize session info", metavar="KEY")
+	# This stuff has been moved to the config file.
+	# parser.add_argument("-d", "--dburi", action="store", default="mysql://sync@127.0.0.1/sync",
+	# 	help="the SQLAlchemy database URI to connect to (default: %(default)s)", metavar="DB")
+	# parser.add_argument("-k", "--key", action="store", default="defaultsecretthatshouldbechangedwhenusedinproduction",
+	# 	help="the secret key that will be used to deserialize session info", metavar="KEY")
 
 	args = parser.parse_args(argv[1:])
 
@@ -45,10 +46,8 @@ def main(argv):
 
 	from sqlalchemy import create_engine
 
-	engine = create_engine(args.dburi)
+	engine = create_engine(config.get("SQLALCHEMY_DATABASE_URI"))
 	Session.configure(bind=engine)
-
-	UserWebSocket.secret_key = args.key
 
 	print("Running WebSocket server on %s:%i..." % (args.host, args.port))
 	server = WSGIServer((args.host, args.port), WebSocketWSGIApplication(handler_cls=UserWebSocket))

@@ -18,6 +18,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from flask import Config # This is probably a bad idea...
+
 from sqlalchemy.orm import sessionmaker
+
+from os import getcwd
+
+config = Config(getcwd() + "/synctron")
+config.from_object("common.default_config")
+config.from_envvar("SYNC_SETTINGS")
 
 Session = sessionmaker()

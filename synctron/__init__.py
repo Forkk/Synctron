@@ -25,7 +25,7 @@ from common.db import Base
 from common.sessioninterface import ItsdangerousSessionInterface
 
 app = Flask(__name__)
-app.config.from_object("synctron.default_settings")
+app.config.from_object("common.default_config")
 app.config.from_envvar("SYNC_SETTINGS")
 
 app.session_interface = ItsdangerousSessionInterface()

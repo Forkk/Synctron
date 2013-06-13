@@ -482,11 +482,17 @@ function updateState(state)
 	}
 	else if (is_playing && state == YT.PlayerState.PAUSED)
 	{
-		// The state changed, assume the user paused.
-		setPlaying(false);
+		// Even though you'd *think* that when the video ended, the state would be
+		// PlayerState.ENDED, like the documentation says, sometimes it's not.
+		// Because of this, we need to make sure it's actually paused and not simply ended...
+		if (vplayer.getCurrentTime() < vplayer.getDuration())
+		{
+			// The state changed, assume the user paused.
+			setPlaying(false);
 
-		console.log("Sending pause");
-		sendPause();
+			console.log("Sending pause");
+			sendPause();
+		}
 	}
 	else if (!is_playing && state == YT.PlayerState.PLAYING)
 	{

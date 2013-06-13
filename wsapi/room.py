@@ -38,7 +38,7 @@ class Room(object):
 	Contains a list of user websockets, data about the room, and functions for performing various operations.
 	"""
 
-	def __init__(self, room_id):
+	def __init__(self, room_id, session=None):
 		"""
 		Initializes a new room with the given ID.
 		"""
@@ -47,7 +47,10 @@ class Room(object):
 		self.room_id = room_id
 
 		# Check if this room is in the database.
-		session = Session()
+		close_session = False
+		if session is None:
+			session = Session()
+			close_session = True
 		room_data = session.query(RoomData).filter_by(name=self.room_id).first()
 		if room_data is None:
 			# Add it if it isn't.
@@ -74,7 +77,7 @@ class Room(object):
 		# This is used to figure out when we should go to the next video in the playlist.
 		self.video_timer = None
 
-		session.close()
+		if close_session: session.close()
 
 
 	##############
@@ -400,7 +403,7 @@ class Room(object):
 		Sets the given user as the room owner.
 		The room owner has all permissions in the room.
 		"""
-		if not user.is_guest:
+		if not user.is_guest():
 			print("%s is now the owner in room %s." % (user, self.room_id))
 			close_session = False
 			if session is None:

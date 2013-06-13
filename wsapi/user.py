@@ -125,9 +125,9 @@ class UserWebSocket(WebSocket):
 
 		# If the room ID specified in data doesn't exist, we need to create/load it.
 		if data["room_id"] not in rooms:
-			self.room = rooms[data["room_id"]] = Room(data["room_id"])
+			self.room = rooms[data["room_id"]] = Room(data["room_id"], session)
 		if len(rooms[data["room_id"]].users) <= 0 and rooms[data["room_id"]].get_room_owner(session) is None:
-			rooms[data["room_id"]].set_room_owner(self)
+			rooms[data["room_id"]].set_room_owner(self, session)
 
 		# Set self.room to the room we're joining.
 		self.room = rooms[data["room_id"]]

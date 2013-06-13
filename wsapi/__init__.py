@@ -25,7 +25,7 @@ from sqlalchemy.orm import sessionmaker
 from os import getcwd
 
 config = Config(getcwd() + "/synctron")
-config.from_object("synctron.default_settings")
+config.from_pyfile("default_settings.py")
 config.from_envvar("SYNC_SETTINGS")
 
 Session = sessionmaker()

@@ -790,6 +790,7 @@ function showAddVideoForm(show)
 		$("#menu-add-end").click(addEndFunc);
 		$("#menu-add-next").click(addNextFunc);
 		$("#videoform").submit(addEndFunc);
+		$("#videoform #video_id").focus();
 	}
 	else
 	{

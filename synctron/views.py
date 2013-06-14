@@ -29,10 +29,14 @@ import uuid
 
 from common.db import UserData, RoomData, stars_table
 
+from sqlalchemy import func
+
 
 @app.route("/")
 def index():
-	return render_template("home.j2")
+	popular_rooms = db.session.query(RoomData, func.count(stars_table.c.room_id).label("star_count")).join(stars_table).group_by(RoomData.id).order_by("star_count DESC").all()
+	return render_template("home.j2", popular_rooms=
+		[{ "name": room.RoomData.name, "stars": room.star_count } for room in popular_rooms])
 
 
 ###########
@@ -42,7 +46,6 @@ def index():
 @app.route("/login")
 def login_page():
 	return render_template("login.j2")
-	
 
 @app.route("/login/ajax", methods=["POST"])
 def login_submit():

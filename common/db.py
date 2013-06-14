@@ -27,8 +27,13 @@ Base = declarative_base()
 
 
 admin_association_table = Table("admins", Base.metadata,
-	Column("user_id", Integer, ForeignKey("users.id")),
-	Column("room_id", Integer, ForeignKey("rooms.id"))
+	Column("user_id",	Integer,	ForeignKey("users.id")), # The user who is the admin.
+	Column("room_id",	Integer,	ForeignKey("rooms.id"))  # The room that the user is an admin in.
+)
+
+stars_table = Table("stars", Base.metadata,
+	Column("user_id",	Integer,	ForeignKey("users.id")), # The user that starred the room.
+	Column("room_id",	Integer,	ForeignKey("rooms.id"))  # The room that the user starred.
 )
 
 class UserData(Base):
@@ -42,7 +47,11 @@ class UserData(Base):
 	password = Column(String(160)) # Hash of user's password
 	email = Column(String(320)) # User's email address
 
-	owned_rooms = relationship("RoomData", backref="owner") # Rooms this user owns.
+	# Rooms this user owns.
+	owned_rooms = relationship("RoomData", backref="owner")
+
+	# Rooms this user has starred.
+	rooms_starred = relationship("RoomData", secondary=stars_table)
 
 	def __init__(self, name, password, email):
 		self.name = name
@@ -64,7 +73,11 @@ class RoomData(Base):
 							collection_class=ordering_list("position"))
 	playlist_pos = Column(Integer) # The currently playing video in the playlist.
 
+	# List of users who are admins in this room.
 	admins = relationship("UserData", secondary=admin_association_table)
+
+	# List of users who starred this room.
+	stars = relationship("UserData", secondary=stars_table)
 
 
 	## Room Settings ##

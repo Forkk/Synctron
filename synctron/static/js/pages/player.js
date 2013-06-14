@@ -748,6 +748,22 @@ $(document).ready(function()
 		sendAction({ action: "reloadplaylist", });
 	});
 
+	// Star button
+	$("#star-btn").click(function(evt)
+	{
+		$.ajax({
+			url: room_id + "/star",
+			data: $.param({ action: $("#star-btn").hasClass("active") ? "unstar" : "star" }),
+			dataType: "json",
+			success: function(data)
+			{
+				setStarred(data.starred, true);
+			},
+		});
+	});
+	updateStarButton();
+
+
 	// Chat input form
 	$("#chat-input-form").submit(function(evt)
 	{
@@ -850,4 +866,35 @@ function updatePlaylistHeight()
 		plistScroll.height(minHeight);
 	else
 		plistScroll.height(availableSpace);
+}
+
+// Does an AJAX request to <room_id>/star to check if the user starred the room and updates the star button.
+function updateStarButton()
+{
+	$.ajax({
+		url: room_id + "/star",
+		dataType: "json",
+		success: function(data)
+		{
+			setStarred(data.starred);
+		},
+	});
+}
+
+function setStarred(starred, reshowTooltip)
+{
+	var tiptext;
+	if (starred == true)
+	{
+		$("#star-btn").addClass("active");
+		tiptext = "Un-star this room";
+	}
+	else
+	{
+		$("#star-btn").removeClass("active");
+		tiptext = "Star this room";
+	}
+	$("#star-btn").attr("data-original-title", tiptext).tooltip("fixTitle");
+	if (reshowTooltip === true)
+		$("#star-btn").tooltip("show");
 }

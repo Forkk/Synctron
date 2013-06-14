@@ -27,7 +27,7 @@ from synctron import app, db
 import json
 import uuid
 
-from common.db import UserData
+from common.db import UserData, RoomData, stars_table
 
 
 @app.route("/")
@@ -110,3 +110,55 @@ def room_page(room_id):
 	return render_template("player.j2", 
 		room_id = room_id, 
 		wsapi_url = app.config.get("WSAPI_URL"))
+
+@app.route("/room/<room_id>/star", methods=["GET", "POST"])
+def star_room(room_id):
+	"""
+	Page that the client makes AJAX requests to in order to check whether or not they've starred the given room.
+	"""
+	# First, we try and find the room the user is trying to star.
+	room = db.session.query(RoomData).filter_by(name=room_id).first()
+
+	# If the room doesn't exist, return an error.
+	if room is None:
+		return json.dumps({ 
+			"error": "room_not_found", 
+			"error_msg": "Can't star a room that doesn't exist.", 
+			"starred": False,
+		})
+
+	# Next, we find the user's account.
+	user = None
+	if "username" in session:
+		user = db.session.query(UserData).filter_by(name=session["username"]).first()
+
+	# If they're not logged in, return an error.
+	if user is None:
+		return json.dumps({ 
+			"error": "not_logged_in", 
+			"error_msg": "You must be logged in to star a room.", 
+			"starred": False,
+		})
+
+	if "action" in request.args:
+		# If 'action' is 'star', we set the user's star.
+		if request.args["action"] == "star":
+			# Check if the user has already starred the room.
+			star_row = db.session.execute(stars_table.select().
+				where(stars_table.c.user_id==user.id).where(stars_table.c.room_id==room.id)).first()
+			# If the user hasn't already starred the room, add a star.
+			if star_row is None:
+				db.session.execute(stars_table.insert().values(user_id=user.id, room_id=room.id))
+				db.session.commit()
+			return json.dumps({ "starred": True })
+
+		# If the user is unstarring the room, remove the star.
+		elif request.args["action"] == "unstar":
+			db.session.execute(stars_table.delete().where(stars_table.c.user_id==user.id).where(stars_table.c.room_id==room.id))
+			db.session.commit()
+			return json.dumps({ "starred": False })
+
+	# If action is unspecified or anything other than "star" or "unstar", check if the user has starred the room.
+	star_row = db.session.execute(stars_table.select().
+		where(stars_table.c.user_id==user.id).where(stars_table.c.room_id==room.id)).first()
+	return json.dumps({ "starred": star_row is not None }) # If the row exists, they've starred the room.

@@ -261,7 +261,7 @@ function updatePlaylistElement()
 		var row = $("<tr id='plist-" + index + "'>");
 		var titleCol = $("<td class='trunc-extra'>");
 		var authorCol= $("<td class='trunc-extra'>" + entry.author + "</td>");
-		var timeCol  = $("<td>" + getTimeStr(entry.duration) + "</td>");
+		var timeCol  = $("<td class='text-right'>" + getTimeStr(entry.duration) + "</td>");
 		var idCol    = $("<td class='monospace'></td>");
 		var byCol    = $("<td class='trunc-extra'>");
 		var closeCol = $("<td>");

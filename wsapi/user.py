@@ -58,6 +58,7 @@ class UserWebSocket(WebSocket):
 			"changevideo": self.action_changevideo,
 			"addvideo": self.action_addvideo,
 			"removevideo": self.action_removevideo,
+			"reloadplaylist": self.action_reloadplaylist,
 			"chatmsg": self.action_chatmsg,
 		}
 
@@ -209,6 +210,14 @@ class UserWebSocket(WebSocket):
 
 		self.room.remove_video(data["index"], user=self)
 
+	def action_reloadplaylist(self, data):
+		"""
+		Re-sends all the playlist information to the user.
+		"""
+		session = Session()
+		self.send_playlistupdate_all(self.room.get_playlist_info(self.room.get_room_data(session)))
+		session.close()
+
 	def action_chatmsg(self, data):
 		"""
 		Posts a chat message from this user to the room.
@@ -256,14 +265,50 @@ class UserWebSocket(WebSocket):
 			"playlist_pos": room_data.playlist_pos,
 		}))
 
-	def send_playlistupdate(self, room_data=None):
-		"""Sends a playlistupdate action to the client containing the given playlist data."""
-		if room_data is None: room_data = self.room.get_room_data()
+
+	def send_playlistupdate_all(self, playlist_info):
+		"""
+		Sends a playlistupdate action to the client specifying that the entire playlist
+		changed.
+		"""
 		self.send(json.dumps({
 			"action": "playlistupdate",
-			"playlist": self.room.get_playlist_info(room_data),
-			"playlist_position": room_data.playlist_pos,
+			"type": "all",
+			"playlist": playlist_info,
 		}))
+
+	def send_playlistupdate_add(self, entries, first_index):
+		"""
+		Sends a playlistupdate action to the client specifying that videos were added to the playlist.
+		"""
+		self.send(json.dumps({
+			"action": "playlistupdate",
+			"type": "add",
+			"entries": entries, 
+			"first_index": first_index,
+		}))
+
+	def send_playlistupdate_remove(self, indices):
+		"""
+		Sends a playlistupdate action to the client specifying that videos were removed from the playlist.
+		"""
+		self.send(json.dumps({
+			"action": "playlistupdate",
+			"type": "remove",
+			"indices": indices,
+		}))
+
+	def send_playlistupdate_move(self, old_index, new_index):
+		"""
+		Sends a playlistupdate action to the client specifying that a video in the playlist has been moved.
+		"""
+		self.send(json.dumps({
+			"action": "playlistupdate",
+			"type": "move",
+			"old_index": old_index,
+			"new_index": new_index,
+		}))
+
 
 	def send_userlistupdate(self, session, room_data=None):
 		"""Sends a userlistupdate action to the client."""
@@ -281,8 +326,6 @@ class UserWebSocket(WebSocket):
 
 		self.send(json.dumps({
 			"action": "userlistupdate",
-			# List of objects containing user info.
-			# See the comment in the above send_playlistupdate for the reason why it's done like this.
 			"userlist": [uinfo_dict(user) for user in self.room.users],
 		}))
 

@@ -168,8 +168,38 @@ class Room(object):
 	#### PLAYLIST STUFF ####
 
 	def playlist_update(self, room_data):
-		"""Called when the playlist changes. Sends playlistupdate to all users."""
-		[user.send_playlistupdate(room_data) for user in self.users]
+		"""
+		Called after the entire playlist changes. Sends playlistupdate to all users.
+		Note that this re-sends the *entire* playlist to each user, making it very inefficient.
+		When possible, playlist_entry_added, playlist_entry_moved, and playlist_entry_removed 
+		should be used instead.
+		"""
+		playlist_info = self.get_playlist_info(room_data)
+		[user.send_playlistupdate_all(playlist_info) for user in self.users]
+
+	def playlist_entries_added(self, entries, first_index):
+		"""
+		Called after any number of entries are added to the playlist.
+		Sends a playlistupdate action to all users with the entries that were added and the 
+		index of the first entry
+		that was added.
+		"""
+		[user.send_playlistupdate_add(entries, first_index) for user in self.users]
+
+	def playlist_entries_removed(self, indices):
+		"""
+		Called after any number of entries are removed from the playlist.
+		Sends a playlistupdate action to all users with the indices of the entries that were added.
+		"""
+		[user.send_playlistupdate_remove(indices) for user in self.users]
+
+	def playlist_entry_moved(self, old_index, new_index):
+		"""
+		Called after a playlist entry is moved to a new index in the playlist.
+		Sends a playlistupdate action to all users with the old and new index of the entry.
+		"""
+		[user.send_playlistupdate_move(old_index, new_index) for user in self.users]
+
 
 	def add_video(self, new_vid, index=None, user=None):
 		"""
@@ -203,12 +233,14 @@ class Room(object):
 			return
 
 		list_entry = PlaylistEntry(new_vid)
+		added_index = None
 
 		if user is not None:
 			list_entry.added_by = user.username
 
 		if index is None:
 			room_data.playlist.append(list_entry)
+			added_index = len(room_data.playlist) - 1
 		else:
 			# If the index is invalid, error.
 			if type(index) is not int:
@@ -219,15 +251,17 @@ class Room(object):
 
 			if index > len(room_data.playlist):
 				room_data.playlist.append(list_entry)
+				added_index = len(room_data.playlist) - 1
 			else:
 				room_data.playlist.insert(index, list_entry)
+				added_index = index
 				if index < room_data.playlist_pos or (index == room_data.playlist_pos and not self.get_playlist_ended(room_data)):
 					room_data.playlist_pos += 1
 
 		session.add(list_entry)
 		session.commit()
 
-		self.playlist_update(room_data)
+		self.playlist_entries_added([get_playlist_entry_info(list_entry)], added_index)
 
 		# If the playlist was over before the video was added, change to the video we added.
 		if was_ended:
@@ -263,7 +297,7 @@ class Room(object):
 		del room_data.playlist[index]
 		session.commit()
 
-		self.playlist_update(room_data)
+		self.playlist_entries_removed([index])
 
 		if not before_current and index == room_data.playlist_pos:
 			# If we're removing the video that's currently playing, the playlist position stays the same,
@@ -368,10 +402,13 @@ class Room(object):
 
 		print("%s joined room %s." % (user, self.room_id))
 
-		# Add the user to the user list, and send them setvideo.
+		# Add the user to the user list, and send them room info.
 		self.users.append(user)
+
+		playlist_info = self.get_playlist_info(room_data)
+		user.send_playlistupdate_all(playlist_info)
+
 		user.send_setvideo(room_data)
-		user.send_playlistupdate(room_data)
 		self.user_list_update(session)
 
 	def remove_user(self, user):

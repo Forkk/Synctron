@@ -337,6 +337,14 @@ function addPlaylistEntry(video, index, shouldUpdatePlaylist)
 	// });
 }
 
+function removePlaylistEntry(index, shouldUpdatePlaylist)
+{
+	playlistObj.splice(index, 1);
+
+	if (shouldUpdatePlaylist === undefined || shouldUpdatePlaylist === true)
+		updatePlaylistElement();
+}
+
 
 // Adds the given video ID or URL to the playlist. Shows an error if it isn't valid.
 // This is for when a user adds a video via the UI.
@@ -587,29 +595,76 @@ actions =
 
 	playlistupdate: function(data, sock)
 	{
-		// For now, we clear the playlist and reload info every time it changes.
-		// In the future, we'll do this in a more efficient way, but for now I just want to get it working.
-		playlistObj = [];
-
-		data.playlist.forEach(function(video, index)
+		switch (data.type)
 		{
-			addPlaylistEntry(video, index);
-		});
+		case "all":
+			// The entire playlist changed. Reload everything.
+			playlistObj = [];
+			data.playlist.forEach(function(video, index)
+			{
+				addPlaylistEntry(video, index);
+			});
+			updatePlaylistElement();
+			break;
 
-		playlist_pos = data.playlist_position;
+		case "add":
+			// Videos were added. Add them to the playlist.
+			data.entries.forEach(function(video, index)
+			{
+				// The index for each entry added should be the index of the first one 
+				// plus the index of the entry in the entries list.
+				addPlaylistEntry(video, index + data.first_index);
+			});
+			updatePlaylistElement();
+			break;
 
-		updatePlaylistElement();
+		case "remove":
+			// Videos were removed. Remove them from the playlist.
+			// This is a bit complicated, because if we just start removing indices,
+			// the index of everything after what we've just removed will change.
+			// To get around this issue, we need to remove the highest indices first.
+			data.indices.sort(function(a, b)
+			{
+				// If a is greater, a comes first.
+				if (a > b)
+					return -1;
+				// If b is greater, b comes first.
+				else if (a < b)
+					return 1;
+				// If they're equal, return 0.
+				else
+					return 0;
+			});
+
+			// Now that the list of indices is sorted with greater indices first,
+			// we can just go through it and remove everything.
+			data.indices.forEach(function(index)
+			{
+				removePlaylistEntry(index, false);
+
+				// If the index we're removing is less than the index of the currently playing video, 
+				// we'll need to decrement playlist_pos too.
+				playlist_pos--;
+			});
+			updatePlaylistElement();
+			break;
+
+		case "move":
+			// TODO: Implement move.
+			sendAction({ action: "reloadplaylist", });
+			break;
+		}
 	},
 
 	userlistupdate: function(data, sock)
 	{
-		// Same as above in playlistupdate.
 		userlistObj = [];
 
 		data.userlist.forEach(function(user, index)
 		{
-			addUserListEntry(user);
+			addUserListEntry(user, index, false);
 		});
+		updateUserListTable();
 	},
 
 	chatmsg: function(data, sock)
@@ -685,6 +740,12 @@ $(document).ready(function()
 	{
 		if (playlist_pos > 0)
 			sendAction({ action: "changevideo", index: playlist_pos - 1, });
+	});
+
+	// Reload playlist button
+	$("#reload-plist-btn").click(function(evt)
+	{
+		sendAction({ action: "reloadplaylist", });
 	});
 
 	// Chat input form

@@ -257,23 +257,11 @@ class UserWebSocket(WebSocket):
 		}))
 
 	def send_playlistupdate(self, room_data=None):
-		"""Sends a playlistupdate action to the client."""
+		"""Sends a playlistupdate action to the client containing the given playlist data."""
 		if room_data is None: room_data = self.room.get_room_data()
 		self.send(json.dumps({
 			"action": "playlistupdate",
-
-			# List of objects containing video info.
-			# Yes, we could just pass the item dicts directly, but we want to make it pass only what is necessary.
-			# This way, if we add something to the playlist entry dicts, it won't be automatically passed through this.
-			"playlist": [
-				{
-					"video_id": item["video_id"],
-					"title": item["title"],
-					"author": item["author"],
-					"duration": item["duration"],
-				}
-			for item in self.room.get_playlist_info(room_data)],
-
+			"playlist": self.room.get_playlist_info(room_data),
 			"playlist_position": room_data.playlist_pos,
 		}))
 

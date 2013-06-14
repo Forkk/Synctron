@@ -160,6 +160,9 @@ function onYouTubeIframeAPIReady()
 //// USER LIST LOGIC ////
 /////////////////////////
 
+// Regular expression for matching a guest's username.
+var guestRegex = /Guest \d+/;
+
 var userlistObj = [];
 
 function updateUserListTable()
@@ -260,6 +263,7 @@ function updatePlaylistElement()
 		var authorCol= $("<td class='trunc-extra'>" + entry.author + "</td>");
 		var timeCol  = $("<td>" + getTimeStr(entry.duration) + "</td>");
 		var idCol    = $("<td class='monospace'></td>");
+		var byCol    = $("<td class='trunc-extra'>");
 		var closeCol = $("<td>");
 
 		titleCol.attr("title", entry.title);
@@ -271,10 +275,23 @@ function updatePlaylistElement()
 		var idLnk    = $("<a href='http://youtu.be/" + entry.id + "' target='_blank'>" + entry.id + "</a>");
 		idCol.append(idLnk);
 
+		if (entry.added_by === null)
+		{
+			byCol.text("Unknown");
+			byCol.addClass("italic");
+		}
+		else
+		{
+			byCol.text(entry.added_by);
+			if (entry.added_by.match(guestRegex))
+				byCol.addClass("italic");
+		}
+
 		row.append(titleCol);
 		row.append(authorCol);
 		row.append(timeCol);
 		row.append(idCol);
+		row.append(byCol);
 		row.append(closeCol);
 
 		titleCol.append($("<div class='trunc-extra'></div>").append(titleLnk));
@@ -300,7 +317,9 @@ function addPlaylistEntry(video, index, shouldUpdatePlaylist)
 		title: video.title,
 		author: video.author,
 		duration: video.duration,
+		added_by: video.added_by,
 	};
+	console.log(video)
 	playlistObj.splice(index, 0, entry);
 
 	if (shouldUpdatePlaylist === undefined || shouldUpdatePlaylist === true)

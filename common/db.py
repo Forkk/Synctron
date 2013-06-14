@@ -38,7 +38,7 @@ class UserData(Base):
 	__tablename__ = "users"
 
 	id = Column(Integer, primary_key=True) # User ID
-	name = Column(String(80), unique=True) # Username
+	name = Column(String(80), unique=True, nullable=False) # Username
 	password = Column(String(160)) # Hash of user's password
 	email = Column(String(320)) # User's email address
 
@@ -68,10 +68,10 @@ class RoomData(Base):
 
 
 	## Room Settings ##
-	users_can_pause =	Column(Boolean, default=1)
-	users_can_skip =	Column(Boolean, default=1)
-	users_can_add =		Column(Boolean, default=1)
-	users_can_remove =	Column(Boolean, default=1)
+	users_can_pause =	Column(Boolean, default=1, nullable=False)
+	users_can_skip =	Column(Boolean, default=1, nullable=False)
+	users_can_add =		Column(Boolean, default=1, nullable=False)
+	users_can_remove =	Column(Boolean, default=1, nullable=False)
 
 	def __init__(self, name):
 		self.name = name
@@ -84,10 +84,12 @@ class PlaylistEntry(Base):
 	__tablename__ = "playlist_entries"
 
 	id = Column(Integer, primary_key=True) # Entry ID number.
-	video_id = Column(String(15)) # The video's YouTube video ID.
-	position = Column(Integer) # The position of the video in the playlist.
+	video_id =	Column(String(15)) # The video's YouTube video ID.
+	position =	Column(Integer) # The position of the video in the playlist.
+	added_by =	Column(String(80)) # The username of the user who added the video.
 
-	room_id = Column(Integer, ForeignKey("rooms.id")) # The ID of the room this entry belongs to.
+	room_id =	Column(Integer, ForeignKey("rooms.id")) # The ID of the room this entry belongs to.
 
-	def __init__(self, vid):
+	def __init__(self, vid, by=None):
 		self.video_id = vid
+		self.added_by = by

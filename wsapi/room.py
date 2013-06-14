@@ -22,6 +22,7 @@ import requests
 
 import time
 from threading import Timer
+from copy import copy
 
 from common.db import RoomData, PlaylistEntry
 
@@ -166,7 +167,7 @@ class Room(object):
 
 	#### PLAYLIST STUFF ####
 
-	def playlist_update(self, room_data=None):
+	def playlist_update(self, room_data):
 		"""Called when the playlist changes. Sends playlistupdate to all users."""
 		[user.send_playlistupdate(room_data) for user in self.users]
 
@@ -202,6 +203,9 @@ class Room(object):
 			return
 
 		list_entry = PlaylistEntry(new_vid)
+
+		if user is not None:
+			list_entry.added_by = user.username
 
 		if index is None:
 			room_data.playlist.append(list_entry)
@@ -483,12 +487,12 @@ class Room(object):
 		return session.query(RoomData).filter_by(name=self.room_id).first()
 
 	def get_playlist(self, room_data):
-		"""Returns an array of the video IDs in the room's playlist."""
+		"""Returns an array of the room's playlist entries."""
 		return room_data.playlist
 
 	def get_playlist_info(self, room_data):
 		"""Returns an array containing video info for each item in the room's playlist."""
-		return [get_video_info(item.video_id) for item in self.get_playlist(room_data)]
+		return [get_playlist_entry_info(entry) for entry in self.get_playlist(room_data)]
 
 	def get_current_video(self, room_data=None):
 		"""
@@ -540,3 +544,17 @@ def get_video_info(vid):
 	}
 	
 	return video_info_cache[vid]
+
+def get_playlist_entry_info(entry):
+	"""
+	Returns the information from get_video_info for the given playlist entry 
+	plus a bit more information such as who added the video.
+	"""
+	# Because get_video_info caches video information, and we're going to be adding data to the dict,
+	# we need to make a copy of it first so that the data we add to the dict doesn't get added to the
+	# data that get_video_info has cached.
+	info = copy(get_video_info(entry.video_id))
+	if info is None:
+		return None
+	info["added_by"] = entry.added_by
+	return info

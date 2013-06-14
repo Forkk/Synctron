@@ -33,6 +33,14 @@
 	overflow-y: scroll;
 }
 
+#title-col	{ width: 70%; }
+#author-col	{ width: 30%; }
+#time-col	{ width: 64px; }
+#id-col		{ width: 100px; }
+#by-col		{ width: 100px; }
+#remove-col	{ width: 24px; }
+
+
 #userlist-scroll
 {
 	height: 140px;
@@ -139,19 +147,21 @@
 		<div id="playlist-scroll">
 			<table class="table table-hover table-condensed table-bordered playlist-table">
 				<colgroup>
-					<col width="48%" />
-					<col width="24%" />
-					<col width="11%" />
-					<col width="17%" />
-					<col width="24px" />
+					<col id="title-col" />
+					<col id="author-col" />
+					<col id="time-col" />
+					<col id="id-col" />
+					<col id="by-col" />
+					<col id="remove-col" />
 				</colgroup>
 
 				<thead>
 					<tr>
-						<th class="expand">Title</th>
+						<th>Title</th>
 						<th>Author</th>
 						<th>Time</th>
 						<th>Video ID</th>
+						<th>Added By</th>
 						<th>
 					</tr>
 				</thead>

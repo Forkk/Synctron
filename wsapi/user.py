@@ -31,9 +31,19 @@ from wsapi.room import Room
 	
 from common.sessioninterface import read_session_data
 
-rooms = {
-	
-}
+rooms = []
+
+roomlist_listeners = []
+
+def get_room(room_id):
+	for room in rooms:
+		if room.room_id == room_id:
+			return room
+	return None
+
+def roomlist_update():
+	"""Sends a roomlist action to all roomlist listeners."""
+	[user.send_roomlist() for user in roomlist_listeners]
 
 # Just a temporary thing for counting users.
 # Used to generate names for users.
@@ -51,6 +61,7 @@ class UserWebSocket(WebSocket):
 		self.room = None
 		self.actions = {
 			"init": self.action_init,
+			"roomlist": self.action_roomlist,
 			"sync": self.action_sync,
 			"play": self.action_play,
 			"pause": self.action_pause,
@@ -91,11 +102,21 @@ class UserWebSocket(WebSocket):
 	def closed(self, code, reason=None):
 		if self.room and self in self.room.users:
 			self.room.remove_user(self)
+		if self in roomlist_listeners:
+			roomlist_listeners.remove(self)
 
 
 	####################
 	# RECEIVED ACTIONS #
 	####################
+
+	def action_roomlist(self, data):
+		"""
+		Action sent by the client on the homepage, asking for a list of rooms with the most people in them.
+		"""
+		self.send_roomlist()
+		if "listen" in data and data["listen"]:
+			roomlist_listeners.append(self)
 
 	def action_init(self, data):
 		"""
@@ -124,18 +145,23 @@ class UserWebSocket(WebSocket):
 			else:
 				self.user_id = None
 
-		# If the room ID specified in data doesn't exist, we need to create/load it.
-		if data["room_id"] not in rooms:
-			self.room = rooms[data["room_id"]] = Room(data["room_id"], session)
-		if len(rooms[data["room_id"]].users) <= 0 and rooms[data["room_id"]].get_room_owner(session) is None:
-			rooms[data["room_id"]].set_room_owner(self, session)
-
 		# Set self.room to the room we're joining.
-		self.room = rooms[data["room_id"]]
+		self.room = get_room(data["room_id"])
+
+		# If the room ID specified in data doesn't exist, we need to create/load it.
+		if self.room is None:
+			self.room = Room(data["room_id"], session)
+			rooms.append(self.room)
+
+			
+		if len(self.room.users) <= 0 and self.room.get_room_owner(session) is None:
+			self.room.set_room_owner(self, session)
 
 		# Add the user to the room.
 		self.room.add_user(self, session)
 		session.close()
+
+		roomlist_update()
 
 	def action_sync(self, data):
 		"""
@@ -232,14 +258,25 @@ class UserWebSocket(WebSocket):
 	# 	No longer used.
 	# 	"""
 
-	# 	print("User %s is changing their nick to %s." % (self.username, data["newnick"]));
-	# 	self.username = data["newnick"];
-	# 	self.room.user_list_update();
+	# 	print("User %s is changing their nick to %s." % (self.username, data["newnick"]))
+	# 	self.username = data["newnick"]
+	# 	self.room.user_list_update()
 
 
 	###################
 	# SENDING ACTIONS #
 	###################
+
+	def send_roomlist(self):
+		"""Sends the client the roomlist"""
+		popular = sorted(rooms, key=lambda room: len(room.users), reverse=True)
+		self.send(json.dumps({
+			"action": "roomlist",
+			"rooms": [{
+				"name": room.room_id,
+				"usercount": len(room.users),
+			} for room in popular[:10]],
+		}))
 
 	def send_sync(self):
 		"""Sends a sync action to the client."""
@@ -356,7 +393,7 @@ class UserWebSocket(WebSocket):
 			"action": "chatmsg",
 			"sender": sender.username,
 			"message": message,
-		}));
+		}))
 
 
 	###############

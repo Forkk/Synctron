@@ -26,11 +26,19 @@ from synctron import app, db
 
 import json
 import uuid
+import re
 
 from common.db import UserData, RoomData, stars_table
 
 from sqlalchemy import func
 
+# Some regexes...
+
+# Usernames must match this regex.
+username_regex = re.compile(r"^[0-9A-Za-z \-\_]+$")
+
+
+# Home page.
 
 @app.route("/")
 def index():
@@ -90,7 +98,13 @@ def signup_submit():
 	if ("username" not in request.form or
 		"password" not in request.form or
 		"email"    not in request.form):
-	   abort(400) # Bad request.
+		abort(400) # Bad request.
+
+	if not username_regex.match(request.form["username"]):
+		return json.dumps({ 
+			"success": False, "error_id": "invalid_name", 
+			"error_msg": "That's not a valid username. Usernames can contain only alphanumerics, spaces, dashes, and underscores."
+		})
 	
 	# Check if there's already a user with this username.
 	if db.session.query(UserData).filter_by(name=request.form["username"]).first() is not None:

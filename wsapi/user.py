@@ -26,24 +26,11 @@ import time
 
 from common.db import UserData
 
-from wsapi import Session, config
+from wsapi import Session, config, rooms, roomlist_listeners, get_room
 from wsapi.room import Room
 	
 from common.sessioninterface import read_session_data
 
-rooms = []
-
-roomlist_listeners = []
-
-def get_room(room_id):
-	for room in rooms:
-		if room.room_id == room_id:
-			return room
-	return None
-
-def roomlist_update():
-	"""Sends a roomlist action to all roomlist listeners."""
-	[user.send_roomlist() for user in roomlist_listeners]
 
 # Just a temporary thing for counting users.
 # Used to generate names for users.
@@ -160,8 +147,6 @@ class UserWebSocket(WebSocket):
 		# Add the user to the room.
 		self.room.add_user(self, session)
 		session.close()
-
-		roomlist_update()
 
 	def action_sync(self, data):
 		"""

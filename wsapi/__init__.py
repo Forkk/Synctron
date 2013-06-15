@@ -29,3 +29,17 @@ config.from_pyfile("default_settings.py")
 config.from_envvar("SYNC_SETTINGS")
 
 Session = sessionmaker()
+
+rooms = []
+
+roomlist_listeners = []
+
+def get_room(room_id):
+	for room in rooms:
+		if room.room_id == room_id:
+			return room
+	return None
+
+def roomlist_update():
+	"""Sends a roomlist action to all roomlist listeners."""
+	[user.send_roomlist() for user in roomlist_listeners]

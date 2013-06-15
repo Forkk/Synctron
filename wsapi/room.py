@@ -26,7 +26,7 @@ from copy import copy
 
 from common.db import RoomData, PlaylistEntry
 
-from wsapi import Session
+from wsapi import Session, roomlist_update
 
 # Calculating Video Time in Rooms:
 # Calculating the current time on a video in rooms is done using two values: start_time and current_pos.
@@ -410,6 +410,7 @@ class Room(object):
 
 		user.send_setvideo(room_data)
 		self.user_list_update(session)
+		roomlist_update()
 
 	def remove_user(self, user):
 		"""
@@ -419,6 +420,7 @@ class Room(object):
 		"""
 		print("%s left room %s." % (user, self.room_id))
 		self.users.remove(user)
+		roomlist_update()
 
 		# This can't be done anymore because the owner must be in the database.
 		# If the user was the room owner and he was a guest, pick a new owner.

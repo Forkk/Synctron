@@ -18,20 +18,42 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from synctron import app
-from socketio.server import SocketIOServer
-from gevent import monkey
-import werkzeug.serving
+import requests
 
-monkey.patch_all() # May need more bananas...
+"""
+A set of functions for getting (and caching) information about YouTube videos.
+"""
 
-@werkzeug.serving.run_with_reloader
-def run_dev_server():
-	app.debug = True
-	port = 8000
-	SocketIOServer(('', port), app, resource="socket.io").serve_forever()
-	app.run(host = "localhost", port = 8000, debug = True)
+# Cache of video info. Dictionary maps video info to video ID.
+video_info_cache = {}
 
-if __name__ == "__main__":
-	run_dev_server()
+def get_video_info(vid):
+	"""
+	Does a YouTube API request and returns a dict containing information about the video.
+	If the given video ID is not a valid YouTube video ID, returns None.
+	"""
+
+	if vid in video_info_cache:
+		return video_info_cache[vid]
+
+	req = requests.get("http://gdata.youtube.com/feeds/api/videos/%s?v=2&alt=json" % vid)
+
+	try:
+		response = req.json()
+	except ValueError:
+		# If it's not valid JSON, this isn't a valid video ID.
+		return None
+
+	author = None
+	if len(response["entry"]["author"]) > 0:
+		author = response["entry"]["author"][0]["name"]["$t"]
+
+	video_info_cache[vid] = {
+		"video_id": vid,
+		"title": response["entry"]["title"]["$t"],
+		"author": author,
+		"duration": int(response["entry"]["media$group"]["yt$duration"]["seconds"]),
+	}
 	
+	return video_info_cache[vid]
+

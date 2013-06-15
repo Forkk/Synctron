@@ -21,8 +21,11 @@
 from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy
 
-from common.db import Base
-from common.sessioninterface import ItsdangerousSessionInterface
+from gevent import monkey
+
+from synctron.sessioninterface import ItsdangerousSessionInterface
+
+monkey.patch_all()
 
 app = Flask(__name__)
 app.config.from_object("synctron.default_settings")
@@ -31,6 +34,5 @@ app.config.from_envvar("SYNC_SETTINGS")
 app.session_interface = ItsdangerousSessionInterface()
 
 db = SQLAlchemy(app)
-Base.metadata.create_all(db.engine)
 
 import synctron.views

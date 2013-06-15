@@ -18,28 +18,40 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from flask import Config # This is probably a bad idea...
+from sqlalchemy import Table, Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.orderinglist import ordering_list
 
-from sqlalchemy.orm import sessionmaker
+from synctron import app, db
+from synctron.room import Base, stars_association_table
 
-from os import getcwd
+class User(Base):
+	"""
+	Class representing a user.
+	"""
+	__tablename__ = "users"
 
-config = Config(getcwd() + "/synctron")
-config.from_pyfile("default_settings.py")
-config.from_envvar("SYNC_SETTINGS")
+	# The user's ID number.
+	id = Column(Integer, primary_key=True)
 
-Session = sessionmaker()
+	# The user's name.
+	name = Column(String(80), unique=True, nullable=False)
 
-rooms = []
+	# Hash of user's password.
+	password = Column(String(160))
 
-roomlist_listeners = []
+	# The user's email address.
+	email = Column(String(320))
 
-def get_room(room_id):
-	for room in rooms:
-		if room.room_id == room_id:
-			return room
-	return None
 
-def roomlist_update():
-	"""Sends a roomlist action to all roomlist listeners."""
-	[user.send_roomlist() for user in roomlist_listeners]
+	# Rooms that this user owns.
+	owned_rooms = relationship("Room", backref="owner")
+
+	# Rooms that this user has starred.
+	rooms_starred = relationship("Room", secondary=stars_association_table)
+
+	def __init__(self, name, password, email):
+		self.name = name
+		self.password = password
+		self.email = email

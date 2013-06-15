@@ -23,78 +23,163 @@
 //// WEBSOCKET STUFF ////
 /////////////////////////
 
-var ws;
+var WEB_SOCKET_SWF_LOCATION = "/static/js/socketio/WebSocketMain.swf";
 
-// Stringifies the given object and sends it to the server.
-function sendAction(data)
+var iframeApiReady = false;
+var socketReady = false;
+
+var socket;
+
+function stuffReady()
 {
-	var msg = JSON.stringify(data);
-	console.log("Sending action: " + msg);
-	ws.send(msg);
+	if (socketReady && iframeApiReady)
+	{
+		console.log("Joining room...");
+		socket.emit("join", room_slug);
+
+		// Start the update state timeout loop.
+		updateStateTimeout();
+
+		// Enable buttons.
+		enableToolbarBtns();
+	}
 }
 
 function initWebSocket()
 {
-	if (!window.WebSocket)
+    socket = io.connect("/room", { reconnect: false });
+
+	socket.on("connect", function()
 	{
-		if (window.MozWebSocket)
-		{
-			window.WebSocket = window.MozWebSocket;
-		}
-		else
-		{
-			alert("Your browser doesn't support WebSockets.");
-		}
-	}
+		console.log("Socket connected.");
+		socketReady = true;
+		stuffReady();
+	});
 
-	ws = new WebSocket(wsapi_url);
-
-	ws.onopen = function(evt)
+	socket.on("connecting", function(type)
 	{
-		
-	}
+		console.log("Trying to connect via " + type + "...");
+	});
 
-	ws.onmessage = function(evt)
+	socket.on("sync", function(video_time, is_playing)
 	{
-		console.log("Message from server: " + evt.data);
+		changePlaying(is_playing);
+		changeCurrentTime(video_time);
+	});
 
-		var data;
-		var action;
-
-		try
-		{
-			data = JSON.parse(evt.data);
-			action = data.action;
-		}
-		catch (SyntaxError) { }
-
-		if (action === undefined)
-		{
-			alert("Server sent invalid message. Not good.");
-			console.log("Server sent invalid message:");
-			console.log(evt.data);
-			ws.close();
-		}
-
-		var actionFunc = actions[action]
-		if (actionFunc === undefined)
-		{
-			console.log("Server sent unknown action '" + actionFunc + "'. Ignoring.");
-		}
-		else
-		{
-			actionFunc(data, ws);
-		}
-	}
-
-	ws.onclose = function(evt)
+	socket.on("video_changed", function(playlist_position, video_id)
 	{
-		console.log("WebSocket closed.");
-		var alertDiv = $("<div class='alert alert-error hide'>");
-		alertDiv.html("<b>Error:</b> Lost connection to the synchronization server. Try refreshing the page in a few seconds.");
-		$("#main-container").prepend(alertDiv);
-		alertDiv.slideDown();
-	}
+		console.log("Video changed to " + video_id);
+
+		// Set the current video.
+		changeCurrentIndex(playlist_pos);
+		vplayer.loadVideoById(video_id === undefined || video_id === null ? "" : video_id);
+
+		console.log("Requesting sync...");
+		socket.emit("sync");
+
+		// Request sync again in a bit to make sure the video is properly synchronized.
+		setTimeout(function()
+		{
+			console.log("Requesting sync...");
+			socket.emit("sync");
+		}, (1*1000));
+
+		// Update the playlist height to make sure the layout works.
+		updatePlaylistHeight();
+	});
+
+	socket.on("playlist_update", function(entries)
+	{
+		playlistObj = [];
+		entries.forEach(function(video, index)
+		{
+			addPlaylistEntry(video, index);
+		});
+		updatePlaylistElement();
+	});
+
+	socket.on("video_added", function(entry, index)
+	{
+		// Videos were added. Add them to the playlist.
+		// data.entries.forEach(function(video, index)
+		// {
+			// The index for each entry added should be the index of the first one 
+			// plus the index of the entry in the entries list.
+			addPlaylistEntry(entry, index);
+		// });
+		updatePlaylistElement();
+	});
+
+	socket.on("videos_removed", function(indices)
+	{
+		// Videos were removed. Remove them from the playlist.
+		// This is a bit complicated, because if we just start removing indices,
+		// the index of everything after what we've just removed will change.
+		// To get around this issue, we need to remove the highest indices first.
+		indices.sort(function(a, b)
+		{
+			// If a is greater, a comes first.
+			if (a > b)
+				return -1;
+			// If b is greater, b comes first.
+			else if (a < b)
+				return 1;
+			// If they're equal, return 0.
+			else
+				return 0;
+		});
+
+		// Now that the list of indices is sorted with greater indices first,
+		// we can just go through it and remove everything.
+		indices.forEach(function(index)
+		{
+			removePlaylistEntry(index, false);
+
+			// If the index we're removing is less than the index of the currently playing video, 
+			// we'll need to decrement playlist_pos too.
+			playlist_pos--;
+		});
+		updatePlaylistElement();
+	});
+
+	socket.on("video_moved", function(old_index, new_index)
+	{
+		// TODO: Implement video moved.
+		socket.emit("reload_playlist");
+	});
+
+	socket.on("userlist_update", function(userlist)
+	{
+		userlistObj = [];
+
+		userlist.forEach(function(user, index)
+		{
+			addUserListEntry(user, index, false);
+		});
+		updateUserListTable();
+	});
+
+	socket.on("chat_message", function(message, from_user)
+	{
+		var chatbox = $("#chatbox-textarea");
+
+		// Determine whether or not we're going to want to scroll to the bottom after we append the message.
+		var distFromBottom = (chatbox[0].scrollHeight - chatbox.scrollTop()) - chatbox.outerHeight();
+		var scrollToBottom = Math.abs(distFromBottom) <= 5;
+
+		// First, we need to make sure any HTML tags are escaped.
+		var escapedMsg = $("<div/>").text(data.message).html();
+
+		// Now, we create a <p> element for the message and append it to the chat box.
+		var msgElement = $("<p><b>" + data.sender + ":</b>&nbsp;" + escapedMsg + "</p>")
+		chatbox.append(msgElement);
+
+		// Finally, if the chatbox was scrolled to the bottom before,
+		// we need to scroll it back to the bottom because we've added a new line.
+		if (scrollToBottom)
+			chatbox.scrollTop(chatbox[0].scrollHeight);
+	});
 }
 
 function onYouTubeIframeAPIReady()
@@ -109,25 +194,11 @@ function onYouTubeIframeAPIReady()
 		events: {
 			onStateChange: function(event)
 			{
-				// if (event.data == YT.PlayerState.PLAYING && lastState != YT.PlayerState.PLAYING)
-				// {
-				// 	console.log("Sending play action...");
-				// 	sendAction({ action: "play", time: vplayer.getCurrentTime() });
-				// }
-				// else if (event.data == YT.PlayerState.PAUSED && lastState != YT.PlayerState.PAUSED)
-				// {
-				// 	console.log("Sending pause action... ");
-				// 	sendAction({ action: "pause", });
-				// }
-
-				// This breaks.
-				// updateState(event.data);
-
 				// When we finish buffering, we should sync.
 				if (event.data != YT.PlayerState.BUFFERING && lastState == YT.PlayerState.BUFFERING)
 				{
 					console.log("Video stopped buffering. Requesting sync...");
-					sendAction({ action: "sync", });
+					socket.emit("sync");
 				}
 
 				lastState = event.data;
@@ -135,19 +206,9 @@ function onYouTubeIframeAPIReady()
 
 			onReady: function(event)
 			{
-				var session = $.cookie("session");
-
-				console.log("Requesting init...");
-				if (session === undefined)
-					sendAction({ action: "init", room_id: room_id,  });
-				else
-					sendAction({ action: "init", room_id: room_id, session: session });
-
-				// Start the update state timeout loop.
-				updateStateTimeout();
-
-				// Enable buttons.
-				enableToolbarBtns();
+				console.log("YouTube iframe API loaded.");
+				iframeApiReady = true;
+				stuffReady();
 			},
 		}
 	});
@@ -247,14 +308,14 @@ function updatePlaylistElement()
 		{
 			evt.preventDefault();
 			var clickedindex = evt.data;
-			sendAction({ action: "changevideo", index: clickedindex, });
+			socket.emit("change_video", clickedindex);
 		};
 
 		var removeVideoClickFunc = function(evt)
 		{
 			evt.preventDefault();
 			var clickedindex = evt.data;
-			sendAction({ action: "removevideo", index: clickedindex, });
+			socket.emit("remove_video", clickedindex);
 		};
 
 		// Build the rows and columns of the table.
@@ -360,11 +421,11 @@ function addVideoToPlaylist(video, index)
 
 	if (index === undefined)
 	{
-		sendAction({ action: "addvideo", video_id: vid });
+		socket.emit("add_video", vid);
 	}
 	else
 	{
-		sendAction({ action: "addvideo", video_id: vid, index: playlist_pos + 1 });
+		socket.emit("add_video", vid, playlist_pos + 1);
 	}
 
 	showAddVideoForm(false);
@@ -415,17 +476,17 @@ function getVIDFromURL(video)
 
 function sendPlay()
 {
-	sendAction({ action: "play" });
+	socket.emit("play");
 }
 
 function sendSeek(time)
 {
-	sendAction({ action: "seek", time: time });
+	socket.emit("seek", time);
 }
 
 function sendPause()
 {
-	sendAction({ action: "pause" });
+	socket.emit("pause");
 }
 
 
@@ -551,147 +612,6 @@ function updateStateTimeout()
 
 
 ////////////////////////////
-//// VIDEO PLAYER STUFF ////
-////////////////////////////
-
-actions = 
-{
-	error: function(data, sock)
-	{
-		console.log(JSON.stringify(data));
-		alert(data.reason_msg);
-	},
-
-	// Handles the init action sent from the server.
-	// Expects the following fields in data: video_id, playlist_pos
-	// Doesn't return anything.
-	setvideo: function(data, sock)
-	{
-		// Set the current video.
-		vplayer.loadVideoById(data.video_id);
-		changeCurrentIndex(data.playlist_pos);
-
-		console.log("Requesting sync...");
-		sendAction({ action: "sync", });
-
-		// Request sync again in a bit to make sure the video is properly synchronized.
-		setTimeout(function()
-		{
-			console.log("Requesting sync...");
-			sendAction({ action: "sync", });
-		}, (1*1000));
-
-		// Update the playlist height to make sure the layout works.
-		updatePlaylistHeight();
-	},
-
-	// Handles the sync action sent from the server.
-	// Expects the following fields: video_time
-	sync: function(data, sock)
-	{
-		changePlaying(data.is_playing);
-		changeCurrentTime(data.video_time);
-	},
-
-	playlistupdate: function(data, sock)
-	{
-		switch (data.type)
-		{
-		case "all":
-			// The entire playlist changed. Reload everything.
-			playlistObj = [];
-			data.playlist.forEach(function(video, index)
-			{
-				addPlaylistEntry(video, index);
-			});
-			updatePlaylistElement();
-			break;
-
-		case "add":
-			// Videos were added. Add them to the playlist.
-			data.entries.forEach(function(video, index)
-			{
-				// The index for each entry added should be the index of the first one 
-				// plus the index of the entry in the entries list.
-				addPlaylistEntry(video, index + data.first_index);
-			});
-			updatePlaylistElement();
-			break;
-
-		case "remove":
-			// Videos were removed. Remove them from the playlist.
-			// This is a bit complicated, because if we just start removing indices,
-			// the index of everything after what we've just removed will change.
-			// To get around this issue, we need to remove the highest indices first.
-			data.indices.sort(function(a, b)
-			{
-				// If a is greater, a comes first.
-				if (a > b)
-					return -1;
-				// If b is greater, b comes first.
-				else if (a < b)
-					return 1;
-				// If they're equal, return 0.
-				else
-					return 0;
-			});
-
-			// Now that the list of indices is sorted with greater indices first,
-			// we can just go through it and remove everything.
-			data.indices.forEach(function(index)
-			{
-				removePlaylistEntry(index, false);
-
-				// If the index we're removing is less than the index of the currently playing video, 
-				// we'll need to decrement playlist_pos too.
-				playlist_pos--;
-			});
-			updatePlaylistElement();
-			break;
-
-		case "move":
-			// TODO: Implement move.
-			sendAction({ action: "reloadplaylist", });
-			break;
-		}
-	},
-
-	userlistupdate: function(data, sock)
-	{
-		userlistObj = [];
-
-		data.userlist.forEach(function(user, index)
-		{
-			addUserListEntry(user, index, false);
-		});
-		updateUserListTable();
-	},
-
-	chatmsg: function(data, sock)
-	{
-		var chatbox = $("#chatbox-textarea");
-
-		// Determine whether or not we're going to want to scroll to the bottom after we append the message.
-		var distFromBottom = (chatbox[0].scrollHeight - chatbox.scrollTop()) - chatbox.outerHeight();
-		var scrollToBottom = Math.abs(distFromBottom) <= 5;
-
-		// First, we need to make sure any HTML tags are escaped.
-		var escapedMsg = $("<div/>").text(data.message).html();
-
-		// Now, we create a <p> element for the message and append it to the chat box.
-		var msgElement = $("<p><b>" + data.sender + ":</b>&nbsp;" + escapedMsg + "</p>")
-		chatbox.append(msgElement);
-
-		// Finally, if the chatbox was scrolled to the bottom before,
-		// we need to scroll it back to the bottom because we've added a new line.
-		if (scrollToBottom)
-			chatbox.scrollTop(chatbox[0].scrollHeight);
-	},
-}
-
-
-
-////////////////////////////
 ////// DOCUMENT READY //////
 ////////////////////////////
 
@@ -726,33 +646,33 @@ $(document).ready(function()
 	$("#resync-btn").click(function(evt)
 	{
 		console.log("Requesting sync...");
-		sendAction({ action: "sync", });
+		socket.emit("sync");
 	});
 
 	// Next/prev buttons.
 	$("#next-btn").click(function(evt)
 	{
 		if (playlist_pos+1 < playlistObj.length)
-			sendAction({ action: "changevideo", index: playlist_pos + 1, });
+			socket.emit("change_video", playlist_pos + 1);
 	});
 
 	$("#prev-btn").click(function(evt)
 	{
 		if (playlist_pos > 0)
-			sendAction({ action: "changevideo", index: playlist_pos - 1, });
+			socket.emit("change_video", playlist_pos - 1);
 	});
 
 	// Reload playlist button
 	$("#reload-plist-btn").click(function(evt)
 	{
-		sendAction({ action: "reloadplaylist", });
+		socket.emit("reload_playlist");
 	});
 
 	// Star button
 	$("#star-btn").click(function(evt)
 	{
 		$.ajax({
-			url: room_id + "/star",
+			url: room_slug + "/star",
 			data: $.param({ action: $("#star-btn").hasClass("active") ? "unstar" : "star" }),
 			dataType: "json",
 			success: function(data)
@@ -768,7 +688,7 @@ $(document).ready(function()
 	$("#chat-input-form").submit(function(evt)
 	{
 		evt.preventDefault();
-		sendAction({ action: "chatmsg", message: $("#chat-input").val(), })
+		socket.emit("chat_message", $("#chat-input").val());
 		$("#chat-input").val("");
 	});
 
@@ -868,11 +788,11 @@ function updatePlaylistHeight()
 		plistScroll.height(availableSpace);
 }
 
-// Does an AJAX request to <room_id>/star to check if the user starred the room and updates the star button.
+// Does an AJAX request to <room_slug>/star to check if the user starred the room and updates the star button.
 function updateStarButton()
 {
 	$.ajax({
-		url: room_id + "/star",
+		url: room_slug + "/star",
 		dataType: "json",
 		success: function(data)
 		{

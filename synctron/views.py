@@ -34,6 +34,7 @@ db.create_all()
 import json
 import uuid
 import re
+from copy import deepcopy
 
 
 # Import Socket.IO stuff.
@@ -200,9 +201,13 @@ def star_room(room_slug):
 @app.route("/socket.io/<path:remaining>")
 def socketio(remaining):
 	try:
+		session_dict = { }
+		if "user" in session:
+			session_dict["user"] = session["user"]
+
 		socketio_manage(request.environ, {
 			"/room": RoomNamespace,
-		}, request)
+		}, (request, session_dict))
 	except:
 		app.logger.error("Exception while handling Socket.IO connection", exc_info=True)
 	return Response()

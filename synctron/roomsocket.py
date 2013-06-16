@@ -24,17 +24,26 @@ from socketio.namespace import BaseNamespace
 from synctron import app, db
 
 from synctron.room import Room
+from synctron.user import User
+
+# Global variable for counting guests.
+guest_ctr = 1
 
 def dbaccess(func):
 	"""Decorator for functions that need access to the database."""
 	def inner(self, *args, **kwargs):
+		created_session = False
+		retval = None
 		if "dbsession" not in self.session or self.session["dbsession"] is None:
 			self.session["dbsession"] = db.Session(db.engine)
+			created_session = True
 		try:
-			func(self, *args, **kwargs)
-			self.session["dbsession"].close()
+			retval = func(self, *args, **kwargs)
 		finally:
-			self.session["dbsession"] = None
+			if created_session:
+				self.session["dbsession"].close()
+				self.session["dbsession"] = None
+		return retval
 	return inner
 
 
@@ -72,12 +81,21 @@ class RoomNamespace(BaseNamespace):
 		"""
 
 		# Authenticate
+		# The flask session is the second item in the tuple passed as socketio_manage's request arg.
+		fsession = self.request[1]
 		self.session["user_id"] = None
 		user = None
-		# if "user" in session:
-		# 	user = db.session.query(UserData).filter_by(id=session["user"]).first()
-		# 	if user is not None:
-		# 		self.session["user_id"] = session["user"] # So much shit named session...
+		if "user" in fsession:
+			user = db.session.query(User).filter_by(id=fsession["user"]).first()
+
+		# Assign a guest ID whether they're a guest or not.
+		global guest_ctr
+		self.session["guest_id"] = guest_ctr
+		guest_ctr += 1
+
+		if user is not None:
+			# If the user is logged in, store their user ID in the socket's session dict.
+			self.session["user_id"] = fsession["user"] # So much shit named session...
 
 		# Get the room.
 		room = self.dbsession.query(Room).filter_by(slug=room_slug).first()
@@ -184,26 +202,53 @@ class RoomNamespace(BaseNamespace):
 	##############
 
 	@property
+	@dbaccess
 	def name(self):
 		"""The user's name."""
-		return "Test"
+		user = None
+		if not self.is_guest:
+			user = self.dbsession.query(User).filter_by(id=self.session["user_id"]).first()
+		if user is None:
+			return "Guest %i" % self.session["guest_id"]
+		else:
+			return user.name
 
 	@property
+	@dbaccess
 	def is_owner(self):
 		"""True if this user owns the room it's connected to."""
-		return True
+		if self.is_guest:
+			return False
+		else:
+			room = self.get_room()
+			if room.owner is None:
+				return False
+			else:
+				return room.owner.id == self.session["user_id"]
 
 	@property
+	@dbaccess
 	def is_admin(self):
 		"""True if this user is an admin in the room it's connected to."""
-		return False
+		if self.is_guest:
+			return False
+		elif self.is_owner:
+			return True
+		else:
+			room = self.get_room()
+			for admin in room.admins:
+				if admin.id == self.session["user_id"]:
+					return True
+			return False
 
 	@property
+	@dbaccess
 	def is_guest(self):
 		"""True if this user is a guest."""
-		return True
+		return "user_id" not in self.session or self.session["user_id"] is None
 
 	@property
+	@dbaccess
 	def info_dict(self):
 		"""
 		A dict containing some information about this user that is used by the user list.

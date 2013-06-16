@@ -119,9 +119,8 @@ class RoomNamespace(BaseNamespace):
 		"""
 		Event called by the client to play the video.
 		"""
-		# TODO: Permission check.
 		room = self.get_room()
-		if room.is_playing:
+		if room.is_playing or not self.can_pause:
 			# If the room is already playing, re-sync whoever tried to play it.
 			self.synchronize(room.current_position, room.is_playing)
 		else:
@@ -133,9 +132,8 @@ class RoomNamespace(BaseNamespace):
 		"""
 		Event called by the client to pause the video.
 		"""
-		# TODO: Permission check.
 		room = self.get_room()
-		if not room.is_playing:
+		if not room.is_playing or not self.can_pause:
 			# If the room is already paused, re-sync whoever tried to pause it.
 			self.synchronize(room.current_position, room.is_playing)
 		else:
@@ -147,9 +145,11 @@ class RoomNamespace(BaseNamespace):
 		"""
 		Event called by the client to seek to a different point in the video.
 		"""
-		# TODO: Permission check.
 		room = self.get_room()
-		room.seek(seek_time)
+		if not self.can_pause:
+			self.synchronize(room.current_position, room.is_playing)
+		else:
+			room.seek(seek_time)
 
 
 	@dbaccess
@@ -157,27 +157,27 @@ class RoomNamespace(BaseNamespace):
 		"""
 		Event called by the client to change the currently playing video to the given index.
 		"""
-		# TODO: Permission check.
-		room = self.get_room()
-		room.change_video(index)
+		if self.can_skip:
+			room = self.get_room()
+			room.change_video(index)
 
 	@dbaccess
 	def on_add_video(self, video_id, index=None):
 		"""
 		Event called by the client to add a video to the playlist.
 		"""
-		# TODO: Permission check.
-		room = self.get_room()
-		room.add_video(video_id, index)
+		if self.can_add:
+			room = self.get_room()
+			room.add_video(video_id, index)
 
 	@dbaccess
 	def on_remove_video(self, index):
 		"""
 		Event called by the client to remove a video from the playlist.
 		"""
-		# TODO: Permission check.
-		room = self.get_room()
-		room.remove_video(index)
+		if self.can_remove:
+			room = self.get_room()
+			room.remove_video(index)
 
 	@dbaccess
 	def on_reload_playlist(self):
@@ -202,12 +202,19 @@ class RoomNamespace(BaseNamespace):
 	##############
 
 	@property
+	def user_id(self):
+		if "user_id" in self.session:
+			return self.session["user_id"]
+		else:
+			return None
+
+	@property
 	@dbaccess
 	def name(self):
 		"""The user's name."""
 		user = None
 		if not self.is_guest:
-			user = self.dbsession.query(User).filter_by(id=self.session["user_id"]).first()
+			user = self.dbsession.query(User).filter_by(id=self.user_id).first()
 		if user is None:
 			return "Guest %i" % self.session["guest_id"]
 		else:
@@ -224,7 +231,7 @@ class RoomNamespace(BaseNamespace):
 			if room.owner is None:
 				return False
 			else:
-				return room.owner.id == self.session["user_id"]
+				return room.owner.id == self.user_id
 
 	@property
 	@dbaccess
@@ -237,7 +244,7 @@ class RoomNamespace(BaseNamespace):
 		else:
 			room = self.get_room()
 			for admin in room.admins:
-				if admin.id == self.session["user_id"]:
+				if admin.id == self.user_id:
 					return True
 			return False
 
@@ -245,7 +252,7 @@ class RoomNamespace(BaseNamespace):
 	@dbaccess
 	def is_guest(self):
 		"""True if this user is a guest."""
-		return "user_id" not in self.session or self.session["user_id"] is None
+		return self.user_id is None
 
 	@property
 	@dbaccess
@@ -260,15 +267,59 @@ class RoomNamespace(BaseNamespace):
 			"isowner": self.is_owner,
 		}
 
-	@property
-	def dbsession(self):
-		return self.session["dbsession"]
-
+	@dbaccess
 	def get_room(self):
 		"""
 		Gets the user's current room from the database.
 		"""
 		return self.dbsession.query(Room).filter_by(slug=self.session["room"]).first()
+
+	@property
+	def dbsession(self):
+		return self.session["dbsession"]
+
+
+	## Permissions ##
+
+	@property
+	@dbaccess
+	def can_pause(self):
+		"""True if the user is allowed to play/pause the video in the room."""
+		if self.is_admin:
+			return True
+		else:
+			room = self.get_room()
+			return room.users_can_pause
+
+	@property
+	@dbaccess
+	def can_skip(self):
+		"""True if the user is allowed to change the playing video in the room."""
+		if self.is_admin:
+			return True
+		else:
+			room = self.get_room()
+			return room.users_can_skip
+
+	@property
+	@dbaccess
+	def can_add(self):
+		"""True if the user is allowed to add videos to the room."""
+		if self.is_admin:
+			return True
+		else:
+			room = self.get_room()
+			return room.users_can_add
+
+	@property
+	@dbaccess
+	def can_remove(self):
+		"""True if the user is allowed to remove videos from the room."""
+		if self.is_admin:
+			return True
+		else:
+			room = self.get_room()
+			return room.users_can_remove
 
 
 	###############
@@ -322,7 +373,7 @@ class RoomNamespace(BaseNamespace):
 		"""
 		Sends the userlist to the client.
 		"""
-		self.emit("userlist_update", userlist)
+		self.emit("userlist_update", [dict(userinfo, isyou=userinfo["username"] == self.name) for userinfo in userlist])
 
 	def chat_message(self, message, from_user):
 		"""

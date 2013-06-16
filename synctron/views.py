@@ -71,7 +71,7 @@ def login_submit():
 		abort(400) # Bad request.
 
 	# Find the given user.
-	user = db.session.query(UserData).filter_by(name=request.form["username"]).first()
+	user = db.session.query(User).filter_by(name=request.form["username"]).first()
 
 	if user is None:
 		# If there's no user by that name, bad login.
@@ -117,7 +117,7 @@ def signup_submit():
 		})
 	
 	# Check if there's already a user with this username.
-	if db.session.query(UserData).filter_by(name=request.form["username"]).first() is not None:
+	if db.session.query(User).filter_by(name=request.form["username"]).first() is not None:
 		# The username is taken.
 		return json.dumps({ "success": False, "error_id": "name_taken", "error_msg": "That username is already taken." })
 
@@ -125,7 +125,7 @@ def signup_submit():
 	passhash = sha512_crypt.encrypt(request.form["password"])
 
 	# Create the user,
-	udata = UserData(request.form["username"], passhash, request.form["email"])
+	udata = User(request.form["username"], passhash, request.form["email"])
 	db.session.add(udata)
 	db.session.commit()
 
@@ -159,7 +159,7 @@ def star_room(room_slug):
 	# Next, we find the user's account.
 	user = None
 	if "user" in session:
-		user = db.session.query(UserData).filter_by(id=session["user"]).first()
+		user = db.session.query(User).filter_by(id=session["user"]).first()
 
 	# If they're not logged in, return an error.
 	if user is None:

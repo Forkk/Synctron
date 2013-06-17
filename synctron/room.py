@@ -23,6 +23,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.orm.session import object_session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.orderinglist import ordering_list
+from sqlalchemy.sql.expression import func
 
 from synctron import app, db
 from synctron.vidinfo import get_video_info
@@ -289,6 +290,24 @@ class Room(Base):
 		self.is_playing = True
 		self.save()
 		self.emit_video_changed(self.playlist_position, self.current_video_id)
+
+	def check_video_ended(self):
+		"""
+		Called every few seconds if the video in the room is playing.
+		Checks if the video has ended and calls video_ended if so.
+		"""
+		current_video = get_video_info(self.current_video_id)
+		if current_video is None:
+			return
+
+		# Get the duration of the currently playing video.
+		# We add 2 to this to give an extra couple seconds of "padding" to make sure videos
+		# don't seem to end early.
+		duration = current_video["duration"] + 2
+
+		# If the current position is greater than or equal to the duration of the video, the video has ended.
+		if self.current_position >= duration:
+			self.video_ended()
 
 	def video_ended(self):
 		"""

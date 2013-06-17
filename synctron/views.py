@@ -34,12 +34,14 @@ db.create_all()
 import json
 import uuid
 import re
-from copy import deepcopy
 
 
 # Import Socket.IO stuff.
 from socketio import socketio_manage
 from roomsocket import RoomNamespace
+
+# Import gevent stuff for our hacky little update rooms loop.
+from gevent import spawn, sleep as gevent_sleep
 
 # Some regexes...
 
@@ -211,3 +213,28 @@ def socketio(remaining):
 	except:
 		app.logger.error("Exception while handling Socket.IO connection", exc_info=True)
 	return Response()
+
+
+############################
+## SILLY ROOM UPDATE LOOP ##
+############################
+
+def room_update_loop():
+	"""Greenlet that calls check_video_ended on all the rooms every few seconds."""
+	while True:
+		gevent_sleep(2)
+		try:
+			dbsession = db.Session(db.engine)
+			# Find all rooms whose videos are playing.
+			rooms = dbsession.query(Room).filter_by(is_playing=True).all()
+			for room in rooms:
+				try:
+					room.check_video_ended()
+				except:
+					app.logger.error("Exception updating room %s." % room.slug, exc_info=True)
+				gevent_sleep(0)
+			dbsession.close()
+		except:
+			app.logger.error("Exception in room update loop.", exc_info=True)
+
+spawn(room_update_loop)

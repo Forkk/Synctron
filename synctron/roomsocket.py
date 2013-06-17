@@ -104,7 +104,8 @@ class RoomNamespace(BaseNamespace):
 		room = self.dbsession.query(Room).filter_by(slug=room_slug).first()
 		if room is None:
 			room = Room(room_slug)
-			room.save()
+			self.dbsession.add(room)
+			self.dbsession.commit()
 
 		self.session["room"] = room_slug
 		room.add_user(self)

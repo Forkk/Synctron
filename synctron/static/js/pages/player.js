@@ -27,6 +27,7 @@ var WEB_SOCKET_SWF_LOCATION = "/static/js/socketio/WebSocketMain.swf";
 
 var iframeApiReady = false;
 var socketReady = false;
+var reconnect = false;
 
 var socket;
 
@@ -47,11 +48,27 @@ function stuffReady()
 
 function initWebSocket()
 {
-    socket = io.connect("/room", { reconnect: false });
+    socket = io.connect("/room");
 
 	socket.on("connect", function()
 	{
 		console.log("Socket connected.");
+
+		if (reconnect)
+		{
+			$("#dc-alert-div").removeClass("alert-error");
+			$("#dc-alert-div").addClass("alert-success");
+			$("#dc-alert-div").text("Reconnected to the server.");
+			setTimeout(function()
+			{
+				$("#dc-alert-div").slideUp();
+			}, 1*1000);
+		}
+		else
+		{
+			$("#dc-alert-div").slideUp();
+		}
+
 		socketReady = true;
 		stuffReady();
 	});
@@ -59,6 +76,20 @@ function initWebSocket()
 	socket.on("connecting", function(type)
 	{
 		console.log("Trying to connect via " + type + "...");
+	});
+
+	socket.on("disconnect", function()
+	{
+		$("#dc-alert-div").removeClass("alert-success");
+		$("#dc-alert-div").addClass("alert-error");
+		$("#dc-alert-div").text("Lost connection to the server.");
+		$("#dc-alert-div").slideDown();
+	});
+
+	socket.on("reconnecting", function()
+	{
+		$("#dc-alert-div").text("Lost connection to the server. Attempting to reconnect...");
+		reconnect = true;
 	});
 
 	socket.on("sync", function(video_time, is_playing)

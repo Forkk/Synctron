@@ -200,10 +200,10 @@ function initWebSocket()
 		var scrollToBottom = Math.abs(distFromBottom) <= 5;
 
 		// First, we need to make sure any HTML tags are escaped.
-		var escapedMsg = $("<div/>").text(data.message).html();
+		var escapedMsg = $("<div/>").text(message).html();
 
 		// Now, we create a <p> element for the message and append it to the chat box.
-		var msgElement = $("<p><b>" + data.sender + ":</b>&nbsp;" + escapedMsg + "</p>")
+		var msgElement = $("<p><b>" + from_user + ":</b>&nbsp;" + escapedMsg + "</p>")
 		chatbox.append(msgElement);
 
 		// Finally, if the chatbox was scrolled to the bottom before,

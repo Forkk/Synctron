@@ -1,3 +1,5 @@
+PORT = 8000
+
 # URI for the database to connect to.
 SQLALCHEMY_DATABASE_URI = "mysql://sync@127.0.0.1/sync2"
 

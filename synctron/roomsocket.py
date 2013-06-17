@@ -384,4 +384,4 @@ class RoomNamespace(BaseNamespace):
 		"""
 		Event fired when a chat message is sent out.
 		"""
-		self.emit(message, from_user.name)
+		self.emit("chat_message", message, from_user.name)

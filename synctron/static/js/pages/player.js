@@ -27,7 +27,6 @@ var WEB_SOCKET_SWF_LOCATION = "/static/js/socketio/WebSocketMain.swf";
 
 var iframeApiReady = false;
 var socketReady = false;
-var reconnect = false;
 
 var socket;
 
@@ -46,6 +45,28 @@ function stuffReady()
 	}
 }
 
+var alertShowing = false;
+
+function alertBox(msg, alertClass, hideTimeout)
+{
+	if ($("#alert-div").hasClass("hide"))
+		$("#alert-div").slideDown();
+
+	if (alertClass !== undefined)
+	{
+		$("#alert-div").removeClass("alert-error");
+		$("#alert-div").removeClass("alert-success");
+		$("#alert-div").removeClass("alert-info");
+		$("#alert-div").addClass("alert-" + alertClass);
+	}
+
+	if (msg !== undefined)
+		$("#alert-div").text(msg);
+
+	if (hideTimeout !== undefined)
+		setTimeout(function() { $("#alert-div").slideUp(); }, hideTimeout);
+}
+
 function initWebSocket()
 {
     socket = io.connect("/room");
@@ -53,22 +74,6 @@ function initWebSocket()
 	socket.on("connect", function()
 	{
 		console.log("Socket connected.");
-
-		if (reconnect)
-		{
-			$("#dc-alert-div").removeClass("alert-error");
-			$("#dc-alert-div").addClass("alert-success");
-			$("#dc-alert-div").text("Reconnected to the server.");
-			setTimeout(function()
-			{
-				$("#dc-alert-div").slideUp();
-			}, 1*1000);
-		}
-		else
-		{
-			$("#dc-alert-div").slideUp();
-		}
-
 		socketReady = true;
 		stuffReady();
 	});
@@ -78,18 +83,34 @@ function initWebSocket()
 		console.log("Trying to connect via " + type + "...");
 	});
 
+	socket.on("connect_failed", function()
+	{
+		console.log("Failed to connect to the server.");
+		alertBox("Failed to connect to the server.");
+	});
+
 	socket.on("disconnect", function()
 	{
-		$("#dc-alert-div").removeClass("alert-success");
-		$("#dc-alert-div").addClass("alert-error");
-		$("#dc-alert-div").text("Lost connection to the server.");
-		$("#dc-alert-div").slideDown();
+		console.log("Lost connection to server.");
+		alertBox("Lost connection to the server.", "error");
 	});
 
 	socket.on("reconnecting", function()
 	{
-		$("#dc-alert-div").text("Lost connection to the server. Attempting to reconnect...");
-		reconnect = true;
+		console.log("Reconnecting to the server.");
+		alertBox("Lost connection to the server. Attempting to reconnect.", "warning");
+	});
+
+	socket.on("reconnect", function()
+	{
+		console.log("Reconnected to the server.");
+		alertBox("Reconnected to the server.", "success", 2000);
+	});
+
+	socket.on("reconnect_failed", function()
+	{
+		console.log("Failed to reconnect.");
+		alertBox("Failed to reconnect to the server.", "error");
 	});
 
 	socket.on("sync", function(video_time, is_playing)

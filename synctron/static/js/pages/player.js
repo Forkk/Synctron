@@ -72,7 +72,7 @@ function initWebSocket()
 		console.log("Video changed to " + video_id);
 
 		// Set the current video.
-		changeCurrentIndex(playlist_pos);
+		changeCurrentIndex(playlist_position);
 		vplayer.loadVideoById(video_id === undefined || video_id === null ? "" : video_id);
 
 		console.log("Requesting sync...");

@@ -23,7 +23,7 @@ from socketio.namespace import BaseNamespace
 
 from synctron import app, db
 
-from synctron.room import Room
+from synctron.room import Room, get_entry_info
 from synctron.user import User
 
 from roomlistsocket import broadcast_room_user_list_update

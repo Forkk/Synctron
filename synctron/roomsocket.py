@@ -173,7 +173,7 @@ class RoomNamespace(BaseNamespace):
 		"""
 		if self.can_add:
 			room = self.get_room()
-			room.add_video(video_id, index)
+			room.add_video(video_id, index, self.name)
 
 	@dbaccess
 	def on_remove_video(self, index):

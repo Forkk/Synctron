@@ -208,7 +208,7 @@ class Room(Base):
 	#### PLAYLIST OPERATIONS ####
 	# Operations relating to the room's playlist.
 
-	def add_video(self, video_id, index=None):
+	def add_video(self, video_id, index=None, added_by=None):
 		"""
 		Adds a video to the playlist.
 
@@ -224,7 +224,7 @@ class Room(Base):
 			# The video ID is not valid. Raise an error.
 			raise Exception("The given video ID is not valid.")
 
-		entry = PlaylistEntry(video_id)
+		entry = PlaylistEntry(video_id, added_by)
 
 		if index is None:
 			self.playlist.append(entry)

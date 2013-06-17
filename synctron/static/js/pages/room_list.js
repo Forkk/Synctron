@@ -18,85 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-function initWebSocket()
-{
-	if (!window.WebSocket)
-	{
-		if (window.MozWebSocket)
-		{
-			window.WebSocket = window.MozWebSocket;
-		}
-		else
-		{
-			alert("Your browser doesn't support WebSockets.");
-		}
-	}
-
-	ws = new WebSocket(wsapi_url);
-
-	ws.onopen = function(evt)
-	{
-		sendAction({ action: "roomlist", listen: true })
-	}
-
-	ws.onmessage = function(evt)
-	{
-		console.log("Message from server: " + evt.data);
-
-		var data;
-		var action;
-
-		try
-		{
-			data = JSON.parse(evt.data);
-			action = data.action;
-		}
-		catch (SyntaxError) { }
-
-		if (action === undefined)
-		{
-			alert("Server sent invalid message. Not good.");
-			console.log("Server sent invalid message:");
-			console.log(evt.data);
-			ws.close();
-		}
-
-		var actionFunc = actions[action]
-		if (actionFunc === undefined)
-		{
-			console.log("Server sent unknown action '" + actionFunc + "'. Ignoring.");
-		}
-		else
-		{
-			actionFunc(data, ws);
-		}
-	}
-
-	ws.onclose = function(evt)
-	{
-		console.log("WebSocket closed.");
-		// var alertDiv = $("<div class='alert alert-error hide'>");
-		// alertDiv.html("<b>Error:</b> Lost connection to the synchronization server. Try refreshing the page in a few seconds.");
-		// $("#main-container").prepend(alertDiv);
-		// alertDiv.slideDown();
-	}
-}
-
-function sendAction(data)
-{
-	var msg = JSON.stringify(data);
-	console.log("Sending action: " + msg);
-	ws.send(msg);
-}
-
-var actions = 
-{
-	roomlist: function(data)
-	{
-		updateRoomList(data.rooms)
-	},
-};
-
 function updateRoomList(rooms)
 {
 	var body = $(".roomlist tbody");
@@ -118,5 +39,17 @@ function updateRoomList(rooms)
 
 $(document).ready(function()
 {
-	initWebSocket();
+	socket = io.connect("/roomlist");
+
+	socket.on("connect", function()
+	{
+		console.log("Socket connected. Requesting list update.");
+		socket.emit("list_update");
+	});
+
+	socket.on("room_list_users", function(rooms)
+	{
+		console.log("Got user count room list update.");
+		updateRoomList(rooms);
+	});
 });

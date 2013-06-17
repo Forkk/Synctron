@@ -39,6 +39,7 @@ import re
 # Import Socket.IO stuff.
 from socketio import socketio_manage
 from roomsocket import RoomNamespace
+from roomlistsocket import RoomListNamespace
 
 # Import gevent stuff for our hacky little update rooms loop.
 from gevent import spawn, sleep as gevent_sleep
@@ -55,7 +56,7 @@ username_regex = re.compile(r"^[0-9A-Za-z \-\_]+$")
 def index():
 	popular_rooms = db.session.query(Room, func.count(stars_association_table.c.room_id).label("star_count")).join(stars_association_table).group_by(Room.id).order_by("star_count DESC").all()
 	return render_template("home.j2", popular_rooms=
-		[{ "name": room.Room.name, "stars": room.star_count } for room in popular_rooms])
+		[{ "name": room.Room.slug, "stars": room.star_count } for room in popular_rooms])
 
 
 ###########
@@ -209,6 +210,7 @@ def socketio(remaining):
 
 		socketio_manage(request.environ, {
 			"/room": RoomNamespace,
+			"/roomlist": RoomListNamespace,
 		}, (request, session_dict))
 	except:
 		app.logger.error("Exception while handling Socket.IO connection", exc_info=True)

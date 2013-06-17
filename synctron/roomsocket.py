@@ -26,6 +26,8 @@ from synctron import app, db
 from synctron.room import Room
 from synctron.user import User
 
+from roomlistsocket import broadcast_room_user_list_update
+
 # Global variable for counting guests.
 guest_ctr = 1
 
@@ -63,6 +65,7 @@ class RoomNamespace(BaseNamespace):
 	def disconnect(self, *args, **kwargs):
 		room = self.get_room()
 		room.remove_user(self)
+		broadcast_room_user_list_update()
 
 	#################
 	# SOCKET EVENTS #
@@ -105,6 +108,7 @@ class RoomNamespace(BaseNamespace):
 
 		self.session["room"] = room_slug
 		room.add_user(self)
+		broadcast_room_user_list_update()
 
 	@dbaccess
 	def on_sync(self):

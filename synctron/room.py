@@ -345,6 +345,8 @@ class Room(Base):
 		"""
 		rooms[self.slug].remove(user)
 		self.userlist_update()
+		if len(rooms[self.slug]) == 0:
+			del rooms[self.slug]
 
 
 	#### CHAT OPERATIONS ####

@@ -4,8 +4,8 @@
 
 {% block js_body %}
 {{ super() }}
-<script type="text/javascript">wsapi_url = "{{ config.WSAPI_URL }}";</script>
-<script type="text/javascript" src="/static/js/pages/roomlist_users.js"></script>
+<script type="text/javascript" src="/static/js/socketio/socket.io.min.js"></script>
+<script type="text/javascript" src="/static/js/pages/room_list.js"></script>
 {% endblock %}
 
 {% block content %}

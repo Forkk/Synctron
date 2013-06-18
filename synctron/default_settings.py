@@ -8,3 +8,6 @@ SECRET_KEY = "defaultsecretthatshouldbechangedwhenusedinproduction"
 
 # This is necessary for the websocket stuff to work.
 SESSION_COOKIE_HTTPONLY = False
+
+# For Google analytics.
+# GOOGLE_ANALYTICS_ID = ""

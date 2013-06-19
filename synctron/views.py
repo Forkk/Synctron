@@ -55,7 +55,9 @@ roomslug_regex = re.compile(r"^[0-9A-Za-z\-\_]+$")
 def index():
 	popular_rooms = db.session.query(Room, func.count(stars_association_table.c.room_id).label("star_count")).join(stars_association_table).group_by(Room.id).order_by("star_count DESC").all()
 	return render_template("home.j2", popular_rooms=
-		[{ "title": room.Room.title, "slug": room.Room.slug, "stars": room.star_count } for room in popular_rooms])
+		[{ "title": room.Room.title, "slug": room.Room.slug, "stars": room.star_count } 
+			for room in popular_rooms
+			if not room.Room.is_private])
 
 
 ###########
@@ -210,7 +212,7 @@ def create_room_page():
 		else:
 			title = request.form["title"]
 			slug = request.form["slug"]
-			is_private = "is-private" in request.form and request.form["is-private"]
+			is_private = "is-private" in request.form and request.form["is-private"] == "on"
 
 			# Check if the room exists
 			room = db.session.query(Room).filter_by(slug=slug).first()

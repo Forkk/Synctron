@@ -69,7 +69,7 @@ class RoomListNamespace(BaseNamespace):
 		room_list = []
 		for slug, usercount in room_dict.iteritems():
 			room = db.session.query(Room).filter_by(slug=slug).first()
-			if room is None:
+			if room is None or room.is_private:
 				continue
 
 			room_data = {

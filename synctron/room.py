@@ -98,6 +98,9 @@ class Room(Base):
 
 
 	## Room Settings ##
+	# A private room is one that doesn't show up on the home page or in searches.
+	is_private =		Column(Boolean, default=0, nullable=False)
+
 	users_can_pause =	Column(Boolean, default=1, nullable=False)
 	users_can_skip =	Column(Boolean, default=1, nullable=False)
 	users_can_add =		Column(Boolean, default=1, nullable=False)

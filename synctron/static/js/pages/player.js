@@ -113,6 +113,20 @@ function initWebSocket()
 		alertBox("Failed to reconnect to the server.", "error");
 	});
 
+	socket.on("error", function(reason)
+	{
+		console.error("Error: " + reason);
+		alertBox("Error: " + reason, "error");
+	});
+
+	socket.on("room_not_found", function()
+	{
+		$("#room-not-found-modal").modal({
+			keyboard: false,
+			backdrop: "static",
+		});
+	});
+
 	socket.on("sync", function(video_time, is_playing)
 	{
 		changePlaying(is_playing);

@@ -1,0 +1,44 @@
+{% extends "base.j2" %}
+
+{% block title %}Create a Room - Synctron{% endblock %}
+
+{% block js_body %}
+{{ super() }}
+<script type='text/javascript' src='/static/js/jquery.validate.min.js'></script>
+<script type="text/javascript" src="/static/js/additional-methods.min.js"></script>
+
+<script type="text/javascript" src="/static/js/pages/create_room_form.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+	<div class="span12">
+		{% if error %}
+		<div class="alert alert-error">
+			<b>Error: </b> {{ error }}
+		</div>
+		{% endif %}
+
+		<form id="create-room-form" class="form" action="create_room" method="POST">
+			<fieldset>
+				<legend>Create a Room</legend>
+
+				<label for="title">Title</label>
+				<input type="text" class="input-xxlarge" id="title" name="title" placeholder="Your room's title..." tabindex=1>
+				<span class="help-block">The title does what it says on the tin. It should be from 2-40 characters long.</span>
+
+				<label for="slug">Slug</label>
+				<input type="text" class="input-xxlarge" id="slug" name="slug" placeholder="Your room's slug..." tabindex=2>
+				<span class="help-block">Your room's slug is its unique identifier used in URLs and the like. It should be from 2-40 characters long and contain only alphanumerics, numbers, dashes, and underscores.</span>
+
+				<label class="checkbox">
+					<input type="checkbox" id="is-private" name="is-private"> Private room?
+				</label>
+				<span class="help-block">Private rooms will not show up on room lists anywhere.</span>
+
+				<button type="submit" class="btn">Create Room</button>
+			</fieldset>
+		</form>
+	</div>
+</div>
+{% endblock %}

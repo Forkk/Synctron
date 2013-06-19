@@ -45,9 +45,8 @@ from roomlistsocket import RoomListNamespace
 from gevent import spawn, sleep as gevent_sleep
 
 # Some regexes...
-
-# Usernames must match this regex.
 username_regex = re.compile(r"^[0-9A-Za-z \-\_]+$")
+roomslug_regex = re.compile(r"^[0-9A-Za-z\-\_]+$")
 
 
 # Home page.
@@ -196,6 +195,29 @@ def star_room(room_slug):
 		where(stars_association_table.c.user_id==user.id).where(stars_association_table.c.room_id==room.id)).first()
 	return json.dumps({ "starred": star_row is not None }) # If the row exists, they've starred the room.
 
+@app.route("/create_room", methods=["GET", "POST"])
+def create_room_page():
+	"""Page for creating a new room."""
+	if request.method == "GET":
+		return render_template("create_room.j2")
+	else:
+		if "user" not in session:
+			return render_template("account_required.j2", message="You need an account to create a room.")
+		else:
+			title = request.form["title"]
+			slug = request.form["slug"]
+			is_private = "is-private" in request.form and request.form["is-private"]
+
+			# Check if the room exists
+			room = db.session.query(Room).filter_by(slug=slug).first()
+			if room is None:
+				room = Room(slug, title)
+				db.session.add(room)
+				db.session.commit()
+				return redirect(url_for("room_page", room_slug=slug))
+			else:
+				# If the room already exists, error
+				return render_template("create_room.j2", error="A room with that slug already exists.")
 
 #############
 ## SOCKETS ##

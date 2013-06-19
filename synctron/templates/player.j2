@@ -182,4 +182,18 @@
 	</div>
 </div>
 
+<div id="room-not-found-modal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="nfmodal-label" aria-hidden="true">
+	<div class="modal-header">
+		<h3 id="nfmodal-label">That room doesn't exist!</h3>
+	</div>
+	<div class="modal-body">
+		<p>The room you're trying to access doesn't seem to exist, but fear not! You can create a room quite easily!</p>
+		<p>Would you like to create a room?</p>
+	</div>
+	<div class="modal-footer">
+		<a href="/" class="btn">No, take me back to the home page.</a>
+		<a href="/create_room" class="btn btn-primary">Yes, I'd like to create a room.</a>
+	</div>
+</div>
+
 {% endblock %}

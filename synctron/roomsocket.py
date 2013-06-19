@@ -64,9 +64,11 @@ class RoomNamespace(BaseNamespace):
 
 	@dbaccess
 	def disconnect(self, *args, **kwargs):
-		room = self.get_room()
-		room.remove_user(self)
-		broadcast_room_user_list_update()
+		if "room" in self.session:
+			room = self.get_room()
+			room.remove_user(self)
+			broadcast_room_user_list_update()
+		BaseNamespace.disconnect(self, *args, **kwargs)
 
 	#################
 	# SOCKET EVENTS #
@@ -104,9 +106,10 @@ class RoomNamespace(BaseNamespace):
 		# Get the room.
 		room = self.dbsession.query(Room).filter_by(slug=room_slug).first()
 		if room is None:
-			room = Room(room_slug)
-			self.dbsession.add(room)
-			self.dbsession.commit()
+			# If the room doesn't exist, send room_not_found and close the socket.
+			self.emit("room_not_found");
+			self.disconnect();
+			return
 
 		self.session["room"] = room_slug
 		room.add_user(self)

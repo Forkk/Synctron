@@ -14,3 +14,6 @@ SESSION_COOKIE_HTTPONLY = False
 
 # Must be specified in some config.
 # YT_API_KEY
+
+# The domain name for the site. This is only used on the UI.
+SITE_DOMAIN_NAME = "localhost:8000"

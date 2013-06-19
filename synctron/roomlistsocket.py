@@ -66,7 +66,19 @@ class RoomListNamespace(BaseNamespace):
 				else:
 					room_dict[connection.session["room"]] = 1
 
-		room_list = [{ "name": name, "usercount": usercount } for name, usercount in room_dict.iteritems()]
+		room_list = []
+		for slug, usercount in room_dict.iteritems():
+			room = db.session.query(Room).filter_by(slug=slug).first()
+			if room is None:
+				continue
+
+			room_data = {
+				"slug": slug,
+				"title": room.title,
+				"usercount": usercount,
+			}
+			room_list.append(room_data)
+
 		room_list.sort(key=lambda room: room["usercount"], reverse=True)
 		self.emit("room_list_users", room_list[:10])
 

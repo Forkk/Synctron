@@ -2,6 +2,16 @@
 
 {% block title %}Synctron{% endblock %}
 
+{% block css_head %}
+{{ super() }}
+
+<style>
+.room-title-col { width: 70%; }
+.room-slug-col { width: 30%; }
+.room-count-col { width: 42px; }
+</style>
+{% endblock %}
+
 {% block js_body %}
 {{ super() }}
 <script type="text/javascript" src="/static/js/socketio/socket.io.min.js"></script>
@@ -31,16 +41,18 @@
 			<table class="table table-condensed table-bordered">
 				<thead>
 					<tr>
-						<th>Room Name</th>
-						<th>Stars</th>
+						<th class="room-title-col">Room Title</th>
+						<th class="room-slug-col">Room Slug</th>
+						<th class="room-count-col">Stars</th>
 					</tr>
 				</thead>
 
 				<tbody>
 					{% for room in popular_rooms %}
 					<tr>
-						<td><a href="/room/{{ room.name }}">{{ room.name }}</a></td>
-						<td>{{ room.stars }}</td>
+						<td><a href="/room/{{ room.slug }}">{{ room.title }}</a></td>
+						<td><a href="/room/{{ room.slug }}">{{ room.slug }}</a></td>
+						<td class="text-right">{{ room.stars }}</td>
 					</tr>
 					{% endfor %}
 				</tbody>
@@ -54,8 +66,9 @@
 			<table class="table table-condensed table-bordered roomlist">
 				<thead>
 					<tr>
-						<th>Room Name</th>
-						<th>Users</th>
+						<th class="room-title-col">Room Title</th>
+						<th class="room-slug-col">Room Slug</th>
+						<th class="room-count-col">Users</th>
 					</tr>
 				</thead>
 

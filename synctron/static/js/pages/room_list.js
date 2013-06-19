@@ -27,10 +27,12 @@ function updateRoomList(rooms)
 	{
 		var row = $("<tr>");
 
-		var nameCol = $("<td>").append($("<a>").attr("href", "/room/" + room.name).text(room.name));
-		var userCountCol = $("<td>").text(room.usercount);
+		var nameCol = $("<td>").append($("<a>").attr("href", "/room/" + room.slug).text(room.title));
+		var slugCol = $("<td>").append($("<a>").attr("href", "/room/" + room.slug).text(room.slug));
+		var userCountCol = $("<td>").addClass("text-right").text(room.usercount);
 
 		row.append(nameCol);
+		row.append(slugCol);
 		row.append(userCountCol);
 
 		body.append(row);

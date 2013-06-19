@@ -55,7 +55,7 @@ roomslug_regex = re.compile(r"^[0-9A-Za-z\-\_]+$")
 def index():
 	popular_rooms = db.session.query(Room, func.count(stars_association_table.c.room_id).label("star_count")).join(stars_association_table).group_by(Room.id).order_by("star_count DESC").all()
 	return render_template("home.j2", popular_rooms=
-		[{ "name": room.Room.slug, "stars": room.star_count } for room in popular_rooms])
+		[{ "title": room.Room.title, "slug": room.Room.slug, "stars": room.star_count } for room in popular_rooms])
 
 
 ###########

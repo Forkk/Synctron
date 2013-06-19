@@ -212,6 +212,7 @@ def create_room_page():
 			room = db.session.query(Room).filter_by(slug=slug).first()
 			if room is None:
 				room = Room(slug, title)
+				room.is_private = is_private
 				db.session.add(room)
 				db.session.commit()
 				return redirect(url_for("room_page", room_slug=slug))

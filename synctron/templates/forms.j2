@@ -65,10 +65,12 @@
 			<ul class="nav pull-right">
 				{% if "username" not in session %}
 
-				<li class="pull-right"><a href="/login">Log In</a></li>
-				<li class="pull-right"><a href="/signup">Create Account</a></li>
+				<li><a href="/login">Log In</a></li>
+				<li><a href="/signup">Create Account</a></li>
 
 				{% else %}
+
+				<li><a href="/create_room">Create a Room</a></li>
 
 				<li class="dropdown">
 					<a href="#" class="dropdown-toggle" data-toggle="dropdown">

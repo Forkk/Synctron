@@ -201,7 +201,11 @@ def create_room_page():
 	if request.method == "GET":
 		return render_template("create_room.j2")
 	else:
-		if "user" not in session:
+		user = None
+		if "user" in session:
+			user = db.session.query(User).filter_by(id=session["user"]).first()
+
+		if user is None:
 			return render_template("account_required.j2", message="You need an account to create a room.")
 		else:
 			title = request.form["title"]
@@ -213,6 +217,7 @@ def create_room_page():
 			if room is None:
 				room = Room(slug, title)
 				room.is_private = is_private
+				room.owner = user
 				db.session.add(room)
 				db.session.commit()
 				return redirect(url_for("room_page", room_slug=slug))

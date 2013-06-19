@@ -137,7 +137,7 @@ class Room(Base):
 	def users(self):
 		"""Generator listing users in the room."""
 		for user in connections:
-			if user.session["room"] == self.slug:
+			if "room" in user.session and user.session["room"] == self.slug:
 				yield user
 
 	@property

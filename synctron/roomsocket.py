@@ -181,8 +181,11 @@ class RoomNamespace(BaseNamespace):
 		Event called by the client to remove a video from the playlist.
 		"""
 		if self.can_remove:
-			room = self.get_room()
-			room.remove_video(index)
+			if get_video_info(video_id) is None:
+				self.emit("error_occurred", "invalid_vid", "The given video ID is not valid.")
+			else:
+				room = self.get_room()
+				room.remove_video(index)
 
 	@dbaccess
 	def on_reload_playlist(self):

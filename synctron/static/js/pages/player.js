@@ -425,6 +425,9 @@ function updatePlaylistElement()
 // If shouldUpdatePlaylist is true or unspecified, updatePlaylistElement will be called.
 function addPlaylistEntry(video, index, shouldUpdatePlaylist)
 {
+	if (video === undefined || video === null)
+		return;
+
 	var entry = {
 		id: video.video_id,
 		title: video.title,

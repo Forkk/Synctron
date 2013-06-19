@@ -10,8 +10,13 @@ decorator==3.4.0
 gevent==0.13.8
 gevent-socketio==0.3.5-rc2
 gevent-websocket==0.3.6
+google-api-python-client==1.1
 greenlet==0.4.0
+gunicorn==0.16.1
+httplib2==0.8
+isodate==0.4.9
 itsdangerous==0.21
 passlib==1.6.1
+python-gflags==2.0
 requests==1.2.0
 wsgiref==0.1.2

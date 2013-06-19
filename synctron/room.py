@@ -296,6 +296,9 @@ class Room(Base):
 		Called every few seconds if the video in the room is playing.
 		Checks if the video has ended and calls video_ended if so.
 		"""
+		if self.current_video_id is None:
+			return
+			
 		current_video = get_video_info(self.current_video_id)
 		if current_video is None:
 			return

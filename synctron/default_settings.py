@@ -11,3 +11,6 @@ SESSION_COOKIE_HTTPONLY = False
 
 # For Google analytics.
 # GOOGLE_ANALYTICS_ID = ""
+
+# Must be specified in some config.
+# YT_API_KEY

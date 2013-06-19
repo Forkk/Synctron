@@ -18,7 +18,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import requests
+from synctron import app
+
+from apiclient.discovery import build
+from apiclient.errors import HttpError
+
+from isodate import parse_duration
+
+yt_service = build("youtube", "v3", developerKey=app.config.get("YT_API_KEY"))
 
 """
 A set of functions for getting (and caching) information about YouTube videos.
@@ -36,24 +43,32 @@ def get_video_info(vid):
 	if vid in video_info_cache:
 		return video_info_cache[vid]
 
-	req = requests.get("http://gdata.youtube.com/feeds/api/videos/%s?v=2&alt=json" % vid)
-
-	try:
-		response = req.json()
-	except ValueError:
-		# If it's not valid JSON, this isn't a valid video ID.
+	if vid is None:
+		app.logger.error("Video ID passed to get_video_info is None.")
 		return None
 
-	author = None
-	if len(response["entry"]["author"]) > 0:
-		author = response["entry"]["author"][0]["name"]["$t"]
+	response = None
+	try:
+		response = yt_service.videos().list(id=vid, 
+			part="id,snippet,contentDetails",
+			fields="items(id,snippet/title,snippet/channelTitle,contentDetails/duration)").execute()
+	except HttpError:
+		app.logger.error("HttpError occurred when trying to get video info for video ID %s." % vid, exc_info=True)
+		raise
 
-	video_info_cache[vid] = {
-		"video_id": vid,
-		"title": response["entry"]["title"]["$t"],
-		"author": author,
-		"duration": int(response["entry"]["media$group"]["yt$duration"]["seconds"]),
-	}
-	
-	return video_info_cache[vid]
+	# If items are returned, the video doesn't exist. We should return None.
+	if len(response["items"]) == 0:
+		return None
+
+	# Otherwise, get some info from the response.
+	else:
+		item = response["items"][0]
+
+		video_info_cache[vid] = {
+			"video_id": item["id"],
+			"title": item["snippet"]["title"],
+			"author": item["snippet"]["channelTitle"],
+			"duration": parse_duration(item["contentDetails"]["duration"]).total_seconds(),
+		}
+		return video_info_cache[vid]
 

@@ -232,6 +232,11 @@ function initWebSocket()
 		if (scrollToBottom)
 			chatbox.scrollTop(chatbox[0].scrollHeight);
 	});
+
+	socket.on("error_occurred", function(errid, message)
+	{
+		alert("Error: " + message);
+	});
 }
 
 function onYouTubeIframeAPIReady()

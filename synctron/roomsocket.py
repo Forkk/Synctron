@@ -25,6 +25,7 @@ from synctron import app, db
 
 from synctron.room import Room, get_entry_info
 from synctron.user import User
+from synctron.vidinfo import get_video_info
 
 from roomlistsocket import broadcast_room_user_list_update
 
@@ -172,8 +173,11 @@ class RoomNamespace(BaseNamespace):
 		Event called by the client to add a video to the playlist.
 		"""
 		if self.can_add:
-			room = self.get_room()
-			room.add_video(video_id, index, self.name)
+			if get_video_info(video_id) is None:
+				self.emit("error_occurred", "invalid_vid", "The given video ID is not valid.")
+			else:
+				room = self.get_room()
+				room.add_video(video_id, index, self.name)
 
 	@dbaccess
 	def on_remove_video(self, index):
@@ -181,11 +185,8 @@ class RoomNamespace(BaseNamespace):
 		Event called by the client to remove a video from the playlist.
 		"""
 		if self.can_remove:
-			if get_video_info(video_id) is None:
-				self.emit("error_occurred", "invalid_vid", "The given video ID is not valid.")
-			else:
-				room = self.get_room()
-				room.remove_video(index)
+			room = self.get_room()
+			room.remove_video(index)
 
 	@dbaccess
 	def on_reload_playlist(self):

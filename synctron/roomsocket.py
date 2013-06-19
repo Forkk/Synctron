@@ -21,7 +21,7 @@
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 
-from synctron import app, db
+from synctron import app, db, connections
 
 from synctron.room import Room, get_entry_info
 from synctron.user import User
@@ -58,16 +58,24 @@ class RoomNamespace(BaseNamespace):
 	def initialize(self):
 		self.logger = app.logger
 		self.log("Socket.IO session started.")
+		connections.append(self)
 
 	def log(self, msg):
 		self.logger.info("[{0}] {1}".format(self.socket.sessid, msg))
 
 	@dbaccess
 	def disconnect(self, *args, **kwargs):
+		connections.remove(self)
+
+		# Stupid hack to fix stupid Socket.IO bug.
+		if "silent" in kwargs:
+			del kwargs["silent"]
+
 		if "room" in self.session:
 			room = self.get_room()
 			room.remove_user(self)
 			broadcast_room_user_list_update()
+
 		BaseNamespace.disconnect(self, *args, **kwargs)
 
 	#################

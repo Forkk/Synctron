@@ -25,15 +25,12 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.sql.expression import func
 
-from synctron import app, db
+from synctron import app, db, connections
 from synctron.vidinfo import get_video_info
 from synctron.database import Base, admin_association_table, stars_association_table
 
 import time
 from copy import copy
-
-# Hacky dictionary mapping room slugs to lists of users.
-rooms = {  }
 
 def get_entry_info(entry):
 	"""
@@ -139,8 +136,8 @@ class Room(Base):
 	@property
 	def users(self):
 		"""Generator listing users in the room."""
-		if self.slug in rooms:
-			for user in rooms[self.slug]:
+		for user in connections:
+			if user.session["room"] == self.slug:
 				yield user
 
 	@property
@@ -337,10 +334,6 @@ class Room(Base):
 		"""
 		Adds a user to the room and sends it events to initialize the client.
 		"""
-		if self.slug not in rooms:
-			rooms[self.slug] = []
-		rooms[self.slug].append(user)
-
 		user.playlist_update([get_entry_info(entry) for entry in self.playlist])
 		user.video_changed(self.playlist_position, self.current_video_id)
 		self.userlist_update()
@@ -349,10 +342,7 @@ class Room(Base):
 		"""
 		Removes a user from the room and emits a userlist update.
 		"""
-		rooms[self.slug].remove(user)
 		self.userlist_update()
-		if len(rooms[self.slug]) == 0:
-			del rooms[self.slug]
 
 
 	#### CHAT OPERATIONS ####

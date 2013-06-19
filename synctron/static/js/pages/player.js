@@ -32,7 +32,7 @@ var socket;
 
 function stuffReady()
 {
-	if (socketReady && iframeApiReady)
+	if (socketReady && iframeApiReady) 
 	{
 		console.log("Joining room...");
 		socket.emit("join", room_slug);
@@ -69,6 +69,9 @@ function alertBox(msg, alertClass, hideTimeout)
 
 function initWebSocket()
 {
+	if (socket !== undefined)
+		return;
+	
     socket = io.connect("/room");
 
 	socket.on("connect", function()

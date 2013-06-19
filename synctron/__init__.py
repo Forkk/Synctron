@@ -35,4 +35,8 @@ app.session_interface = ItsdangerousSessionInterface()
 
 db = SQLAlchemy(app)
 
+# Stupid array for keeping track of connected users.
+# It has to be in here to prevent stupid circular imports.
+connections = []
+
 import synctron.views

@@ -20,9 +20,9 @@
 
 from socketio.namespace import BaseNamespace
 
-from synctron import app, db
+from synctron import app, db, connections as roomsocket_connections
 
-from synctron.room import Room, rooms
+from synctron.room import Room
 
 _connections = []
 
@@ -38,8 +38,13 @@ class RoomListNamespace(BaseNamespace):
 	def log(self, msg):
 		self.logger.info("[{0}] {1}".format(self.socket.sessid, msg))
 
-	def disconnect(self):
-		_connections.remove(self)
+	def disconnect(self, *args, **kwargs):
+		if "silent" in kwargs:
+			del kwargs["silent"]
+
+		if self in _connections:
+			_connections.remove(self)
+		BaseNamespace.disconnect(self, *args, **kwargs)
 
 
 	#################
@@ -53,9 +58,17 @@ class RoomListNamespace(BaseNamespace):
 
 	def send_room_user_list_update(self, broadcast=False):
 		"""Sends the client a list of rooms with the most users."""
-		roomlist = [{ "name": name, "usercount": len(users) } for name, users in rooms.iteritems()]
-		roomlist.sort(key=lambda room: room["usercount"], reverse=True)
-		self.emit("room_list_users", roomlist[:10])
+		room_dict = {}
+		for connection in roomsocket_connections:
+			if "room" in connection.session:
+				if connection.session["room"] in room_dict:
+					room_dict[connection.session["room"]] += 1
+				else:
+					room_dict[connection.session["room"]] = 1
+
+		room_list = [{ "name": name, "usercount": usercount } for name, usercount in room_dict.iteritems()]
+		room_list.sort(key=lambda room: room["usercount"], reverse=True)
+		self.emit("room_list_users", room_list[:10])
 
 def broadcast_room_user_list_update():
 	"""Calls send_room_user_list_update for all connections."""

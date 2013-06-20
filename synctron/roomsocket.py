@@ -32,10 +32,22 @@ from roomlistsocket import broadcast_room_user_list_update
 # Global variable for counting guests.
 guest_ctr = 1
 
+def socketevent(func):
+	"""Decorator for Socket.IO event functions. Handles and logs exceptions."""
+	def inner(self, *args, **kwargs):
+		retval = None
+		try:
+			retval = func(self, *args, **kwargs)
+		except Exception as e:
+			self.logger.error("Uncaught exception in event handler %s. Closing connection." % func.__name__, exc_info=True)
+			self.emit("server_error", "Uncaught exception in function %s" % func)
+			self.disconnect()
+		return retval
+	return inner
+
 def dbaccess(func):
 	"""Decorator for functions that need access to the database."""
 	def inner(self, *args, **kwargs):
-		global opensessions
 		dbsession = kwargs.pop("dbsession", None)
 		session_created = False
 		retval = None
@@ -90,6 +102,7 @@ class RoomNamespace(BaseNamespace):
 	# SOCKET EVENTS #
 	#################
 
+	@socketevent
 	@dbaccess
 	def on_join(self, room_slug):
 		"""
@@ -131,6 +144,7 @@ class RoomNamespace(BaseNamespace):
 		room.add_user(self)
 		broadcast_room_user_list_update()
 
+	@socketevent
 	@dbaccess
 	def on_sync(self):
 		"""
@@ -139,6 +153,7 @@ class RoomNamespace(BaseNamespace):
 		room = self.get_room()
 		self.synchronize(room.current_position, room.is_playing)
 
+	@socketevent
 	@dbaccess
 	def on_play(self):
 		"""
@@ -152,6 +167,7 @@ class RoomNamespace(BaseNamespace):
 			# Otherwise, play the video.
 			room.play()
 
+	@socketevent
 	@dbaccess
 	def on_pause(self):
 		"""
@@ -165,6 +181,7 @@ class RoomNamespace(BaseNamespace):
 			# Otherwise, pause the video.
 			room.pause()
 
+	@socketevent
 	@dbaccess
 	def on_seek(self, seek_time):
 		"""
@@ -177,6 +194,7 @@ class RoomNamespace(BaseNamespace):
 			room.seek(seek_time)
 
 
+	@socketevent
 	@dbaccess
 	def on_change_video(self, index):
 		"""
@@ -188,6 +206,7 @@ class RoomNamespace(BaseNamespace):
 		else:
 			self.emit("error_occurred", "not_allowed", "You're not allowed to skip videos in this room.")
 
+	@socketevent
 	@dbaccess
 	def on_add_video(self, video_id, index=None):
 		"""
@@ -202,6 +221,7 @@ class RoomNamespace(BaseNamespace):
 		else:
 			self.emit("error_occurred", "not_allowed", "You're not allowed to add videos to this room.")
 
+	@socketevent
 	@dbaccess
 	def on_remove_video(self, index):
 		"""
@@ -213,6 +233,7 @@ class RoomNamespace(BaseNamespace):
 		else:
 			self.emit("error_occurred", "not_allowed", "You're not allowed to remove videos in this room.")
 
+	@socketevent
 	@dbaccess
 	def on_reload_playlist(self):
 		"""
@@ -221,6 +242,7 @@ class RoomNamespace(BaseNamespace):
 		room = self.get_room()
 		self.playlist_update([get_entry_info(entry) for entry in room.playlist])
 
+	@socketevent
 	@dbaccess
 	def on_shuffle_playlist(self):
 		"""
@@ -233,6 +255,7 @@ class RoomNamespace(BaseNamespace):
 			self.emit("error_occurred", "not_allowed", "You're not allowed to move videos in this room.")
 
 
+	@socketevent
 	@dbaccess
 	def on_chat_message(self, message):
 		"""

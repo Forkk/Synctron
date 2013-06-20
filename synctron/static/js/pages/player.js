@@ -71,6 +71,8 @@ function initWebSocket()
 {
 	if (socket !== undefined)
 		return;
+
+	var server_error_msg = undefined;
 	
     socket = io.connect("/room");
 
@@ -94,14 +96,21 @@ function initWebSocket()
 
 	socket.on("disconnect", function()
 	{
-		console.log("Lost connection to server.");
-		alertBox("Lost connection to the server.", "error");
+		console.log("Disconnected from server.");
+		if (server_error_msg === undefined)
+		{
+			alertBox("Disconnected from the server.", "error");
+		}
+		else
+		{
+			alertBox("Disconnected from the server: " + server_error_msg, "error");
+		}
 	});
 
 	socket.on("reconnecting", function()
 	{
 		console.log("Reconnecting to the server.");
-		alertBox("Lost connection to the server. Attempting to reconnect.", "warning");
+		alertBox("Disconnected from the server. Attempting to reconnect.", "warning");
 	});
 
 	socket.on("reconnect", function()
@@ -118,8 +127,8 @@ function initWebSocket()
 
 	socket.on("error", function(reason)
 	{
-		console.error("Error: " + reason);
-		alertBox("Error: " + reason, "error");
+		console.error("A Socket.IO error occurred: " + reason);
+		alertBox("Socket.IO Error: " + reason, "error");
 	});
 
 	socket.on("room_not_found", function()
@@ -254,6 +263,14 @@ function initWebSocket()
 	{
 		alert("Error: " + message);
 	});
+
+	socket.on("server_error", function(message)
+	{
+		server_error_msg = message;
+		alertBox("The server encountered an error: " + message);
+	});
+
+	socket.on("")
 }
 
 function onYouTubeIframeAPIReady()

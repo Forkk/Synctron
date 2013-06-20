@@ -71,7 +71,7 @@ class RoomNamespace(BaseNamespace):
 		if self in connections:
 			connections.remove(self)
 
-		if self.session["dbsession"] is not None:
+		if "dbsession" in self.session and self.session["dbsession"] is not None:
 			self.log("Closing leaked session")
 			self.session["dbsession"].close()
 
@@ -108,7 +108,7 @@ class RoomNamespace(BaseNamespace):
 		self.session["user_id"] = None
 		user = None
 		if "user" in fsession:
-			user = db.session.query(User).filter_by(id=fsession["user"]).first()
+			user = self.dbsession.query(User).filter_by(id=fsession["user"]).first()
 
 		# Assign a guest ID whether they're a guest or not.
 		global guest_ctr
@@ -316,7 +316,10 @@ class RoomNamespace(BaseNamespace):
 		"""
 		Gets the user's current room from the database.
 		"""
-		return self.dbsession.query(Room).filter_by(slug=self.session["room"]).first()
+		if "room" in self.session:
+			return self.dbsession.query(Room).filter_by(slug=self.session["room"]).first()
+		else:
+			return None
 
 	@property
 	def dbsession(self):

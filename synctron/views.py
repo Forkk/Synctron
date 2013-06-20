@@ -38,7 +38,7 @@ import re
 
 # Import Socket.IO stuff.
 from socketio import socketio_manage
-from roomsocket import RoomNamespace, opensessions
+from roomsocket import RoomNamespace
 from roomlistsocket import RoomListNamespace
 
 # Import gevent stuff for our hacky little update rooms loop.

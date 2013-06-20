@@ -67,17 +67,21 @@ class RoomListNamespace(BaseNamespace):
 					room_dict[connection.session["room"]] = 1
 
 		room_list = []
-		for slug, usercount in room_dict.iteritems():
-			room = db.session.query(Room).filter_by(slug=slug).first()
-			if room is None or room.is_private:
-				continue
+		dbsession = db.Session(db.engine)
+		try:
+			for slug, usercount in room_dict.iteritems():
+				room = dbsession.query(Room).filter_by(slug=slug).first()
+				if room is None or room.is_private:
+					continue
 
-			room_data = {
-				"slug": slug,
-				"title": room.title,
-				"usercount": usercount,
-			}
-			room_list.append(room_data)
+				room_data = {
+					"slug": slug,
+					"title": room.title,
+					"usercount": usercount,
+				}
+				room_list.append(room_data)
+		finally:
+			dbsession.close()
 
 		room_list.sort(key=lambda room: room["usercount"], reverse=True)
 		self.emit("room_list_users", room_list[:10])

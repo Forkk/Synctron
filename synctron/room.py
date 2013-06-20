@@ -327,7 +327,12 @@ class Room(Base):
 		"""
 		Gets a list of dicts containing info about users in the room and passes it to emit_userlist_update.
 		"""
-		userlist = [u.info_dict for u in self.users]
+		dbsession = db.Session(db.engine)
+		userlist = []
+		try:
+			userlist = [u.info_dict(dbsession=dbsession) for u in self.users]
+		finally:
+			dbsession.close()
 		self.emit_userlist_update(userlist)
 
 	def add_user(self, user):
@@ -381,7 +386,8 @@ class Room(Base):
 		[user.video_moved(old_index, new_index) for user in self.users]
 
 	def emit_userlist_update(self, userlist):
-		[user.userlist_update(userlist) for user in self.users]
+		dbsession = db.Session(db.engine)
+		[user.userlist_update(userlist, dbsession=dbsession) for user in self.users]
 
 	def emit_chat_message(self, message, from_user):
 		[user.chat_message(message, from_user) for user in self.users]

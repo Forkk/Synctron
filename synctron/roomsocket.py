@@ -35,20 +35,24 @@ guest_ctr = 1
 def dbaccess(func):
 	"""Decorator for functions that need access to the database."""
 	def inner(self, *args, **kwargs):
-		created_session = False
+		global opensessions
+		dbsession = kwargs.pop("dbsession", None)
+		session_created = False
 		retval = None
 		if "dbsession" not in self.session or self.session["dbsession"] is None:
-			self.session["dbsession"] = db.Session(db.engine)
-			created_session = True
+			if dbsession is None:
+				dbsession = db.Session(db.engine)
+				session_created = True
+			self.session["dbsession"] = dbsession
 		try:
 			retval = func(self, *args, **kwargs)
 		finally:
-			if created_session:
-				self.session["dbsession"].close()
+			if dbsession is not None and "dbsession" in self.session and self.session["dbsession"] is not None:
+				if session_created:
+					self.session["dbsession"].close()
 				self.session["dbsession"] = None
 		return retval
 	return inner
-
 
 class RoomNamespace(BaseNamespace):
 	"""
@@ -63,9 +67,13 @@ class RoomNamespace(BaseNamespace):
 	def log(self, msg):
 		self.logger.info("[{0}] {1}".format(self.socket.sessid, msg))
 
-	@dbaccess
 	def disconnect(self, *args, **kwargs):
-		connections.remove(self)
+		if self in connections:
+			connections.remove(self)
+
+		if self.session["dbsession"] is not None:
+			self.log("Closing leaked session")
+			self.session["dbsession"].close()
 
 		# Stupid hack to fix stupid Socket.IO bug.
 		if "silent" in kwargs:
@@ -274,7 +282,6 @@ class RoomNamespace(BaseNamespace):
 		"""True if this user is a guest."""
 		return self.user_id is None
 
-	@property
 	@dbaccess
 	def info_dict(self):
 		"""
@@ -389,11 +396,16 @@ class RoomNamespace(BaseNamespace):
 		"""
 		self.emit("video_moved", old_index, new_index)
 
+	@dbaccess
 	def userlist_update(self, userlist):
 		"""
 		Sends the userlist to the client.
 		"""
-		self.emit("userlist_update", [dict(userinfo, isyou=userinfo["username"] == self.name) for userinfo in userlist])
+		self.emit("userlist_update", 
+			[dict(
+				userinfo, 
+				isyou=userinfo["username"] == self.name) 
+			for userinfo in userlist])
 
 	def chat_message(self, message, from_user):
 		"""

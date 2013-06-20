@@ -240,7 +240,7 @@ class Room(Base):
 			else:
 				self.playlist.insert(index, entry)
 				if index < self.playlist_position or (index == self.playlist_position and self.video_is_playing):
-					self.playlist_pos += 1
+					self.playlist_position += 1
 
 		# Add it to the database.
 		self.dbsession.add(entry)

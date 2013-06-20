@@ -400,3 +400,9 @@ class RoomNamespace(BaseNamespace):
 		Event fired when a chat message is sent out.
 		"""
 		self.emit("chat_message", message, from_user.name)
+
+	def config_update(self, room):
+		"""
+		Event fired when room settings change.
+		"""
+		self.emit("config_update")

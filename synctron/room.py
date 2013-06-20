@@ -69,7 +69,7 @@ class Room(Base):
 
 
 	# Whether the video is currently playing or not.
-	is_playing = Column(Boolean)
+	is_playing = Column(Boolean, default=False, nullable=False)
 
 	# The time since epoch last time the video was started.
 	start_timestamp = Column(Integer, default=0, nullable=False)

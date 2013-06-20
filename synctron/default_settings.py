@@ -1,7 +1,7 @@
 PORT = 8000
 
 # URI for the database to connect to.
-SQLALCHEMY_DATABASE_URI = "mysql://sync@127.0.0.1/sync2"
+SQLALCHEMY_DATABASE_URI = "mysql://sync@127.0.0.1/sync"
 
 # Flask's secret key. This should be changed in production deployments.
 SECRET_KEY = "defaultsecretthatshouldbechangedwhenusedinproduction"

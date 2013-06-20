@@ -745,6 +745,12 @@ $(document).ready(function()
 		socket.emit("reload_playlist");
 	});
 
+	// Shuffle button
+	$("#shuffle-plist-btn").click(function(evt)
+	{
+		socket.emit("shuffle_playlist");
+	});
+
 	// Star button
 	$("#star-btn").click(function(evt)
 	{

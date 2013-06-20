@@ -185,6 +185,8 @@ class RoomNamespace(BaseNamespace):
 		if self.can_skip:
 			room = self.get_room()
 			room.change_video(index)
+		else:
+			self.emit("error_occurred", "not_allowed", "You're not allowed to skip videos in this room.")
 
 	@dbaccess
 	def on_add_video(self, video_id, index=None):
@@ -197,6 +199,8 @@ class RoomNamespace(BaseNamespace):
 			else:
 				room = self.get_room()
 				room.add_video(video_id, index, self.name)
+		else:
+			self.emit("error_occurred", "not_allowed", "You're not allowed to add videos to this room.")
 
 	@dbaccess
 	def on_remove_video(self, index):
@@ -206,6 +210,8 @@ class RoomNamespace(BaseNamespace):
 		if self.can_remove:
 			room = self.get_room()
 			room.remove_video(index)
+		else:
+			self.emit("error_occurred", "not_allowed", "You're not allowed to remove videos in this room.")
 
 	@dbaccess
 	def on_reload_playlist(self):
@@ -214,6 +220,17 @@ class RoomNamespace(BaseNamespace):
 		"""
 		room = self.get_room()
 		self.playlist_update([get_entry_info(entry) for entry in room.playlist])
+
+	@dbaccess
+	def on_shuffle_playlist(self):
+		"""
+		Event called by the client to randomize the order of videos in the playlist.
+		"""
+		if self.can_move:
+			room = self.get_room()
+			room.shuffle_playlist()
+		else:
+			self.emit("error_occurred", "not_allowed", "You're not allowed to move videos in this room.")
 
 
 	@dbaccess
@@ -347,6 +364,16 @@ class RoomNamespace(BaseNamespace):
 		else:
 			room = self.get_room()
 			return room.users_can_remove
+
+	@property
+	@dbaccess
+	def can_move(self):
+		"""True if the user can move videos in the playlist."""
+		if self.is_admin:
+			return True
+		else:
+			room = self.get_room()
+			return room.users_can_move
 
 
 	###############

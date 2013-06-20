@@ -31,6 +31,7 @@ from synctron.database import Base, admin_association_table, stars_association_t
 
 import time
 from copy import copy
+from random import shuffle
 
 def get_entry_info(entry):
 	"""
@@ -102,6 +103,7 @@ class Room(Base):
 	users_can_skip =	Column(Boolean, default=1, nullable=False)
 	users_can_add =		Column(Boolean, default=1, nullable=False)
 	users_can_remove =	Column(Boolean, default=1, nullable=False)
+	users_can_move =	Column(Boolean, default=1, nullable=False)
 
 
 	def __init__(self, slug, title=None):
@@ -272,6 +274,19 @@ class Room(Base):
 		# If we're removing the currently playing video, call change video to change to the new currently playing video.
 		if not before_current and index == self.playlist_position:
 			self.change_video(self.playlist_position)
+
+	def shuffle_playlist(self):
+		"""
+		Shuffles the playlist. Very complicated.
+		"""
+		current = None
+		if self.video_is_playing:
+			current = self.playlist[self.playlist_position]
+		shuffle(self.playlist)
+		self.playlist_position = self.playlist.index(current)
+		self.save()
+		self.emit_playlist_update([get_entry_info(entry) for entry in self.playlist])
+		self.emit_video_changed(self.playlist_position, self.current_video_id)
 
 	def change_video(self, index, time_padding=3):
 		"""

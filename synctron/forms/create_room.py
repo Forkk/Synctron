@@ -64,7 +64,8 @@ def create_room():
 		if form.validate_on_submit():
 			room = Room(request.form["slug"], request.form["title"])
 			room.is_private = "is-private" in request.form and request.form["is-private"] == "on"
+			room.owner = user
 			db.session.add(room)
 			db.session.commit()
-			return redirect(url_for("room_page", room_slug=slug))
+			return redirect(url_for("room_page", room_slug=request.form["slug"]))
 	return render_template("create_room.j2", form=form)

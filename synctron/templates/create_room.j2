@@ -20,7 +20,7 @@
 				<div class="control-group {{ "error" if form.title.errors }}">
 					<label class="control-label" for="title">{{ form.title.label }}</label>
 					<div class="controls">
-						{{ form.title() }}
+						{{ form.title(class="input-large") }}
 						{% if form.title.errors %}<span class="help-inline">{{ form.title.errors[0] }}</span>{% endif %}
 					</div>
 				</div>
@@ -28,8 +28,12 @@
 				<div class="control-group {{ "error" if form.slug.errors }}">
 					<label class="control-label" for="slug">{{ form.slug.label }}</label>
 					<div class="controls">
-						{{ form.slug() }}
+						 <div id="slug-prepend" class="input-prepend">
+						 	<span id="slug-add-on" class="add-on">{{ config.SITE_DOMAIN_NAME }}/room/</span>
+						 	{{ form.slug(class="input-large") }}
+						 </div>
 						{% if form.slug.errors %}<span class="help-inline">{{ form.slug.errors[0] }}</span>{% endif %}
+						<span class="help-block">The room's slug is the name the room is identified by in URLs.</span>
 					</div>
 				</div>
 
@@ -55,4 +59,22 @@
 		</form>
 	</div>
 </div>
+{% endblock %}
+
+{% block css_head %}
+{{ super() }}
+<style>
+#title { width: 330px; }
+</style>
+{% endblock %}
+
+{% block js_body %}
+{{ super() }}
+
+<script type="text/javascript">
+$(document).ready(function()
+{
+	$("#title").width($("#slug-prepend").innerWidth() - 14);
+});
+</script>
 {% endblock %}

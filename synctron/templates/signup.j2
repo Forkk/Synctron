@@ -6,15 +6,55 @@
 
 <div class="row">
 	<div class="span12">
-		{{ forms.signup_form() }}
+		<form id="signup-form" class="form-horizontal" method="POST">
+			{{ form.csrf_token }}
+			<fieldset>
+				<legend>Create an account</legend>
+
+				<div class="control-group {{ "error" if form.username.errors }}">
+					<label class="control-label" for="username">{{ form.username.label }}</label>
+					<div class="controls">
+						{{ form.username() }}
+						{% if form.username.errors %}<span class="help-inline">{{ form.username.errors[0] }}</span>{% endif %}
+					</div>
+				</div>
+
+				<div class="control-group {{ "error" if form.email.errors }}">
+					<label class="control-label" for="email">{{ form.email.label }}</label>
+					<div class="controls">
+						{{ form.email() }}
+						{% if form.email.errors %}<span class="help-inline">{{ form.email.errors[0] }}</span>{% endif %}
+					</div>
+				</div>
+
+				<div class="control-group {{ "error" if form.password.errors }}">
+					<label class="control-label" for="password">{{ form.password.label }}</label>
+					<div class="controls">
+						{{ form.password() }}
+						{% if form.password.errors %}<span class="help-inline">{{ form.password.errors[0] }}</span>{% endif %}
+					</div>
+				</div>
+
+				<div class="control-group {{ "error" if form.confirm.errors }}">
+					<label class="control-label" for="confirm">{{ form.confirm.label }}</label>
+					<div class="controls">
+						{{ form.confirm() }}
+						{% if form.confirm.errors %}<span class="help-inline">{{ form.confirm.errors[0] }}</span>{% endif %}
+					</div>
+				</div>
+
+				<div class="control-group {{ "error" if form.captcha.errors }}">
+					<label class="control-label" for="captcha">Are you an evil robot?</label>
+					<div class="controls">
+						{{ form.captcha() }}
+						{% if form.captcha.errors %}<span class="help-inline">{{ form.captcha.errors[0] }}</span>{% endif %}
+					</div>
+				</div>
+
+				<button id="submit" type="submit" class="btn btn-primary">Create Account</button>
+			</fieldset>
+		</form>
 	</div>
 </div>
 
-{% endblock %}
-
-{% block js_body %}
-{{ super() }}
-<script type='text/javascript' src='/static/js/jquery.validate.min.js'></script>
-
-<script type="text/javascript" src="/static/js/pages/signup_form.js"></script>
 {% endblock %}

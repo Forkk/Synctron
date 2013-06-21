@@ -49,6 +49,11 @@ username_regex = re.compile(r"^[0-9A-Za-z \-\_]+$")
 roomslug_regex = re.compile(r"^[0-9A-Za-z\-\_]+$")
 
 
+# Some other modules containing other pages.
+import synctron.forms.account
+import synctron.forms.create_room
+
+
 # Home page.
 
 @app.route("/")
@@ -58,83 +63,6 @@ def index():
 		[{ "title": room.Room.title, "slug": room.Room.slug, "stars": room.star_count } 
 			for room in popular_rooms
 			if not room.Room.is_private])
-
-
-###########
-## LOGIN ##
-###########
-
-@app.route("/login")
-def login_page():
-	return render_template("login.j2")
-
-@app.route("/login/ajax", methods=["POST"])
-def login_submit():
-	# Make sure the request is valid.
-	if ("username" not in request.form or
-		"password" not in request.form):
-		abort(400) # Bad request.
-
-	# Find the given user.
-	user = db.session.query(User).filter_by(name=request.form["username"]).first()
-
-	if user is None:
-		# If there's no user by that name, bad login.
-		return json.dumps({ "success": False, "error_id": "bad_login", "error_msg": "Wrong username or password." })
-	else:
-		# Otherwise, verify the password.
-		if sha512_crypt.verify(request.form["password"], user.password):
-			# Login succeeded. Set up the user's session.
-			session["user"] = user.id
-			session["username"] = user.name
-			return json.dumps({ "success": True })
-		else:
-			# Bad login.
-			return json.dumps({ "success": False, "error_id": "bad_login", "error_msg": "Wrong username or password." })
-
-@app.route("/logout", methods=["GET", "POST"])
-def logout_page():
-	session.pop("user", None)
-	session.pop("username", None)
-	return redirect(url_for("index"))
-
-
-############
-## SIGNUP ##
-############
-
-@app.route("/signup")
-def signup_page():
-	return render_template("signup.j2")
-
-@app.route("/signup/ajax", methods=["POST"])
-def signup_submit():
-	# Make sure the request is valid.
-	if ("username" not in request.form or
-		"password" not in request.form or
-		"email"    not in request.form):
-		abort(400) # Bad request.
-
-	if not username_regex.match(request.form["username"]):
-		return json.dumps({ 
-			"success": False, "error_id": "invalid_name", 
-			"error_msg": "That's not a valid username. Usernames can contain only alphanumerics, spaces, dashes, and underscores."
-		})
-	
-	# Check if there's already a user with this username.
-	if db.session.query(User).filter_by(name=request.form["username"]).first() is not None:
-		# The username is taken.
-		return json.dumps({ "success": False, "error_id": "name_taken", "error_msg": "That username is already taken." })
-
-	# Hash the password.
-	passhash = sha512_crypt.encrypt(request.form["password"])
-
-	# Create the user,
-	udata = User(request.form["username"], passhash, request.form["email"])
-	db.session.add(udata)
-	db.session.commit()
-
-	return json.dumps({ "success": True, })
 
 
 ###########
@@ -197,35 +125,6 @@ def star_room(room_slug):
 		where(stars_association_table.c.user_id==user.id).where(stars_association_table.c.room_id==room.id)).first()
 	return json.dumps({ "starred": star_row is not None }) # If the row exists, they've starred the room.
 
-@app.route("/create_room", methods=["GET", "POST"])
-def create_room_page():
-	"""Page for creating a new room."""
-	if request.method == "GET":
-		return render_template("create_room.j2")
-	else:
-		user = None
-		if "user" in session:
-			user = db.session.query(User).filter_by(id=session["user"]).first()
-
-		if user is None:
-			return render_template("account_required.j2", message="You need an account to create a room.")
-		else:
-			title = request.form["title"]
-			slug = request.form["slug"]
-			is_private = "is-private" in request.form and request.form["is-private"] == "on"
-
-			# Check if the room exists
-			room = db.session.query(Room).filter_by(slug=slug).first()
-			if room is None:
-				room = Room(slug, title)
-				room.is_private = is_private
-				room.owner = user
-				db.session.add(room)
-				db.session.commit()
-				return redirect(url_for("room_page", room_slug=slug))
-			else:
-				# If the room already exists, error
-				return render_template("create_room.j2", error="A room with that slug already exists.")
 
 #############
 ## SOCKETS ##

@@ -5,21 +5,37 @@
 {% block content %}
 <div class="row">
 	<div class="span12">
-		{{ forms.login_form() }}
+		{% if login_failed %}
+		<div class="alert alert-error">
+			<b>Error:</b> Wrong username or password.
+		</div>
+		{% endif %}
+
+		<form id="login-form" class="form-horizontal" method="POST">
+			<fieldset>
+				<legend>Log In</legend>
+
+				{{ form.csrf_token }}
+
+				<div class="control-group {{ "error" if form.username.errors }}">
+					<label class="control-label" for="username">{{ form.username.label }}</label>
+					<div class="controls">
+						{{ form.username() }}
+						{% if form.username.errors %}<span class="help-inline">{{ form.username.errors[0] }}</span>{% endif %}
+					</div>
+				</div>
+
+				<div class="control-group {{ "error" if form.password.errors }}">
+					<label class="control-label" for="password">{{ form.password.label }}</label>
+					<div class="controls">
+						{{ form.password() }}
+						{% if form.password.errors %}<span class="help-inline">{{ form.password.errors[0] }}</span>{% endif %}
+					</div>
+				</div>
+
+				<button id="submit" type="submit" class="btn btn-primary">Log In</button>
+			</fieldset>
+		</form>
 	</div>
 </div>
-{% endblock %}
-
-{% block js_body %}
-{{ super() }}
-
-<script type="text/javascript">
-{% if success_redirect_url %}
-loginSuccessHref = "{{ success_redirect_url }}";
-{% else %}
-loginSuccessHref = undefined;
-{% endif %}
-</script>
-
-<script type="text/javascript" src="/static/js/pages/login_form.js"></script>
 {% endblock %}

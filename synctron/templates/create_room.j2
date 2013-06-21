@@ -2,14 +2,6 @@
 
 {% block title %}Create a Room - Synctron{% endblock %}
 
-{% block js_body %}
-{{ super() }}
-<script type='text/javascript' src='/static/js/jquery.validate.min.js'></script>
-<script type="text/javascript" src="/static/js/additional-methods.min.js"></script>
-
-<script type="text/javascript" src="/static/js/pages/create_room_form.js"></script>
-{% endblock %}
-
 {% block content %}
 <div class="row">
 	<div class="span12">
@@ -19,24 +11,46 @@
 		</div>
 		{% endif %}
 
-		<form id="create-room-form" class="form" action="create_room" method="POST">
+		<form id="create-room-form" class="form-horizontal" method="POST">
 			<fieldset>
 				<legend>Create a Room</legend>
 
-				<label for="title">Title</label>
-				<input type="text" class="input-xxlarge" id="title" name="title" placeholder="Your room's title..." tabindex="1">
-				<span class="help-block">The title does what it says on the tin. It should be from 2-40 characters long.</span>
+				{{ form.csrf_token }}
 
-				<label for="slug">Slug</label>
-				<input type="text" class="input-xxlarge" id="slug" name="slug" placeholder="Your room's slug..." tabindex="2">
-				<span class="help-block">Your room's slug is its unique identifier used in URLs and the like. It should be from 2-40 characters long and contain only alphanumerics, numbers, dashes, and underscores.</span>
+				<div class="control-group {{ "error" if form.title.errors }}">
+					<label class="control-label" for="title">{{ form.title.label }}</label>
+					<div class="controls">
+						{{ form.title() }}
+						{% if form.title.errors %}<span class="help-inline">{{ form.title.errors[0] }}</span>{% endif %}
+					</div>
+				</div>
 
-				<label class="checkbox">
-					<input type="checkbox" id="is-private" name="is-private" tabindex="3"> Private room?
-				</label>
-				<span class="help-block">Private rooms will not show up on room lists anywhere.</span>
+				<div class="control-group {{ "error" if form.slug.errors }}">
+					<label class="control-label" for="slug">{{ form.slug.label }}</label>
+					<div class="controls">
+						{{ form.slug() }}
+						{% if form.slug.errors %}<span class="help-inline">{{ form.slug.errors[0] }}</span>{% endif %}
+					</div>
+				</div>
 
-				<button type="submit" class="btn" tabindex="4">Create Room</button>
+				<div class="control-group {{ "error" if form.is_private.errors }}">
+					<div class="controls">
+						<label class="checkbox" for="is_private">
+							{{ form.is_private() }} {{ form.is_private.label }}
+						</label>
+						{% if form.is_private.errors %}<span class="help-inline">{{ form.is_private.errors[0] }}</span>{% endif %}
+					</div>
+				</div>
+
+				<div class="control-group {{ "error" if form.captcha.errors }}">
+					<label class="control-label" for="captcha">Are you an evil robot?</label>
+					<div class="controls">
+						{{ form.captcha() }}
+						{% if form.captcha.errors %}<span class="help-inline">{{ form.captcha.errors[0] }}</span>{% endif %}
+					</div>
+				</div>
+
+				<button id="submit" type="submit" class="btn btn-primary">Create Room</button>
 			</fieldset>
 		</form>
 	</div>

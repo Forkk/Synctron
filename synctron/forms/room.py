@@ -18,6 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+"""
+Forms related to creating and managing rooms.
+"""
+
 from synctron import app, db
 from synctron.user import User
 from synctron.room import Room
@@ -25,6 +29,10 @@ from synctron.room import Room
 from flask import render_template, redirect, abort, url_for, request, session
 from flask.ext.wtf import Form, RecaptchaField
 from wtforms import BooleanField, TextField, PasswordField, ValidationError, validators
+
+#################
+## CREATE ROOM ##
+#################
 
 class CreateRoomForm(Form):
 	"""
@@ -48,7 +56,7 @@ class CreateRoomForm(Form):
 
 	is_private = BooleanField("Make room private?")
 
-	captcha = RecaptchaField()
+	captcha = RecaptchaField("Are you an evil robot?")
 
 @app.route("/create_room", methods=["GET", "POST"])
 def create_room():
@@ -57,7 +65,7 @@ def create_room():
 	if "user" in session:
 		user = db.session.query(User).filter_by(id=session["user"]).first()
 	if user is None:
-		return render_template("account_required.j2", message="You need an account to create a room.")
+		return render_template("error/account_required.j2", message="You need to be logged in to create a room.")
 
 	else:
 		form = CreateRoomForm()
@@ -69,3 +77,63 @@ def create_room():
 			db.session.commit()
 			return redirect(url_for("room_page", room_slug=request.form["slug"]))
 	return render_template("create_room.j2", form=form)
+
+
+###################
+## ROOM SETTINGS ##
+###################
+
+class RoomSettingsForm(Form):
+	"""
+	Form for changing a room's settings.
+	"""
+	title = TextField("Room Title", [
+		validators.Required(message="You must specify a room title."),
+		validators.Length(min=2, max=40, message="Title must be 2-40 characters long."),
+	])
+	topic = TextField("Room Topic")
+	is_private = BooleanField("Private")
+
+	users_can_add = BooleanField("Users can add videos")
+	users_can_remove = BooleanField("Users can remove videos")
+	users_can_move = BooleanField("Users can reorder the playlist")
+	users_can_pause = BooleanField("Users can pause")
+	users_can_skip = BooleanField("Users can skip to a different video in the playlist.")
+
+
+@app.route("/room/<slug>/settings", methods=["GET", "POST"])
+def room_settings(slug):
+	# Get the room.
+	room = db.session.query(Room).filter_by(slug=slug).first()
+
+	# Error if the room doesn't exist.
+	if room is None:
+		return render_template("error/generic.j2", message="That room doesn't exist.")
+
+	# Get the user.
+	user = None
+	if "user" in session:
+		user = db.session.query(User).filter_by(id=session["user"]).first()
+
+	# Error if the user isn't logged in.
+	if user is None:
+		return render_template("error/account_required.j2", message="You need to be logged in to change room settings.")
+
+	# Error if the user doesn't own the room.
+	if room.owner != user:
+		return render_template("error/generic.j2", head="I'm sorry %s, I'm afraid I can't do that." % user.name, 
+			message="You can't change settings on a room you don't own.")
+
+	form = RoomSettingsForm(obj=room)
+	message = None
+	msg_type = "info"
+	msg_timeout = None
+	if form.validate_on_submit():
+		# Set fields in the room and commit to the database.
+		form.populate_obj(room)
+		db.session.commit()
+		message = "Room settings saved successfully."
+		msg_type = "success"
+		msg_timeout = 3000
+		room.emit_config_update()
+	return render_template("room_settings.j2", form=form, alert_msg=message, alert_type=msg_type, alert_timeout=msg_timeout)

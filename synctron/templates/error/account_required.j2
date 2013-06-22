@@ -1,13 +1,15 @@
-{% extends "base.j2" %}
+{% extends "error/generic.j2" %}
 
-{% block title %}Error - Synctron{% endblock %}
+{% block error_head %}Sorry{% endblock %}
 
-{% block content %}
-<h1>Sorry</h1>
+{% block error_content %}
+
 {% if message %}
 <p>{{ message }}</p>
 {% else %}
 <p>You need an account to do that.</p>
 {% endif %}
+
 <p>Please <a href="/signup" title="Create an account">create an account</a> or <a href="/login" title="Log in">log in</a>, then try again.</p>
+
 {% endblock %}

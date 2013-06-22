@@ -51,7 +51,7 @@ roomslug_regex = re.compile(r"^[0-9A-Za-z\-\_]+$")
 
 # Some other modules containing other pages.
 import synctron.forms.account
-import synctron.forms.create_room
+import synctron.forms.room
 
 
 # Home page.

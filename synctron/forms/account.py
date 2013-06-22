@@ -65,7 +65,7 @@ class SignupForm(Form):
 	confirm = PasswordField("Repeat Password")
 
 	# The most annoying necessary evil ever devised by mankind.
-	captcha = RecaptchaField()
+	captcha = RecaptchaField("Are you an evil robot?")
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():

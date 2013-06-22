@@ -17,21 +17,9 @@
 
 				{{ form.csrf_token }}
 
-				<div class="control-group {{ "error" if form.username.errors }}">
-					<label class="control-label" for="username">{{ form.username.label }}</label>
-					<div class="controls">
-						{{ form.username() }}
-						{% if form.username.errors %}<span class="help-inline">{{ form.username.errors[0] }}</span>{% endif %}
-					</div>
-				</div>
+				{{ forms.input_field(form.username) }}
 
-				<div class="control-group {{ "error" if form.password.errors }}">
-					<label class="control-label" for="password">{{ form.password.label }}</label>
-					<div class="controls">
-						{{ form.password() }}
-						{% if form.password.errors %}<span class="help-inline">{{ form.password.errors[0] }}</span>{% endif %}
-					</div>
-				</div>
+				{{ forms.input_field(form.password) }}
 
 				<button id="submit" type="submit" class="btn btn-primary">Log In</button>
 			</fieldset>

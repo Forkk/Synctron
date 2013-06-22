@@ -141,6 +141,7 @@ class RoomNamespace(BaseNamespace):
 			return
 
 		self.session["room"] = room_slug
+		self.config_update(room)
 		room.add_user(self)
 		broadcast_room_user_list_update()
 
@@ -470,4 +471,12 @@ class RoomNamespace(BaseNamespace):
 		"""
 		Event fired when room settings change.
 		"""
-		self.emit("config_update")
+		self.emit("config_update", {
+			"title": room.title,
+			"topic": room.topic,
+			"users_can_add": room.users_can_add,
+			"users_can_remove": room.users_can_remove,
+			"users_can_move": room.users_can_move,
+			"users_can_pause": room.users_can_pause,
+			"users_can_skip": room.users_can_skip,
+		})

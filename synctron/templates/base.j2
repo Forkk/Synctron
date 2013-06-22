@@ -52,7 +52,39 @@
 <body>
 	{% block body %}
 
-	{{ forms.navbar() }}
+	<div class="navbar">
+		<div class="navbar-inner">
+			<a class="brand" href="/">Synctron</a>
+			<ul class="nav">
+				<li><a href="/">Home</a></li>
+			</ul>
+
+			<ul class="nav pull-right">
+				{% if "username" not in session %}
+
+				<li><a href="/login">Log In</a></li>
+				<li><a href="/signup">Create Account</a></li>
+
+				{% else %}
+
+				<li><a href="/create_room">Create a Room</a></li>
+
+				<li class="dropdown">
+					<a href="#" class="dropdown-toggle" data-toggle="dropdown">
+						{{ session["username"] }}
+						<b class="caret"></b>
+					</a>
+					<ul class="dropdown-menu">
+						<li><a href="#">Account Settings</a></li>
+						<li class="divider"></li>
+						<li><a href="/logout">Log Out</a></li>
+					</ul>
+				</li>
+
+				{% endif %}
+			</ul>
+		</div>
+	</div>
 	
 	<div class="container" id="main-container">
 		{% block content %}

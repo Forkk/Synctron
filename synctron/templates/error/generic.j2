@@ -1,0 +1,18 @@
+{% extends "base.j2" %}
+
+{% block title %}Error - Synctron{% endblock %}
+
+{% block content %}
+<h1>{% block error_head %}{% if head %}{{ head }}{% else %}Uh oh!{% endif %}{% endblock %}</h1>
+
+{% block error_content %}
+
+{% if message %}
+<p>{{ message }}</p>
+{% else %}
+<p>An unknown error occurred.</p>
+{% endif %}
+
+{% endblock %}
+
+{% endblock %}

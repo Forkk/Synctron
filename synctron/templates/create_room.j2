@@ -17,42 +17,21 @@
 
 				{{ form.csrf_token }}
 
-				<div class="control-group {{ "error" if form.title.errors }}">
-					<label class="control-label" for="title">{{ form.title.label }}</label>
-					<div class="controls">
-						{{ form.title(class="input-large") }}
-						{% if form.title.errors %}<span class="help-inline">{{ form.title.errors[0] }}</span>{% endif %}
-					</div>
-				</div>
+				{{ forms.input_field(form.title,
+					class="input-large",
+				) }}
 
-				<div class="control-group {{ "error" if form.slug.errors }}">
-					<label class="control-label" for="slug">{{ form.slug.label }}</label>
-					<div class="controls">
-						 <div id="slug-prepend" class="input-prepend">
-						 	<span id="slug-add-on" class="add-on">{{ config.SITE_DOMAIN_NAME }}/room/</span>
-						 	{{ form.slug(class="input-large") }}
-						 </div>
-						{% if form.slug.errors %}<span class="help-inline">{{ form.slug.errors[0] }}</span>{% endif %}
-						<span class="help-block">The room's slug is the name the room is identified by in URLs.</span>
-					</div>
-				</div>
+				{{ forms.input_field(form.slug, 
+					help="The room's slug is the name the room is identified by in URLs.",
+					class="input-large",
+					prepend=config.SITE_DOMAIN_NAME + "/room/",
+				) }}
 
-				<div class="control-group {{ "error" if form.is_private.errors }}">
-					<div class="controls">
-						<label class="checkbox" for="is_private">
-							{{ form.is_private() }} {{ form.is_private.label }}
-						</label>
-						{% if form.is_private.errors %}<span class="help-inline">{{ form.is_private.errors[0] }}</span>{% endif %}
-					</div>
-				</div>
+				{{ forms.bool_field(form.is_private,
+					help="Private rooms don't show up in the room lists on the front page.",
+				) }}
 
-				<div class="control-group {{ "error" if form.captcha.errors }}">
-					<label class="control-label" for="captcha">Are you an evil robot?</label>
-					<div class="controls">
-						{{ form.captcha() }}
-						{% if form.captcha.errors %}<span class="help-inline">{{ form.captcha.errors[0] }}</span>{% endif %}
-					</div>
-				</div>
+				{{ forms.captcha_field(form.captcha) }}
 
 				<button id="submit" type="submit" class="btn btn-primary">Create Room</button>
 			</fieldset>
@@ -74,7 +53,7 @@
 <script type="text/javascript">
 $(document).ready(function()
 {
-	$("#title").width($("#slug-prepend").innerWidth() - 14);
+	$("#title").width($("#slug-control-group .input-prepend").innerWidth() - 14);
 });
 </script>
 {% endblock %}

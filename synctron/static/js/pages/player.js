@@ -28,6 +28,8 @@ var WEB_SOCKET_SWF_LOCATION = "/static/js/socketio/WebSocketMain.swf";
 var iframeApiReady = false;
 var socketReady = false;
 
+var roomTopic;
+
 var socket;
 
 function stuffReady()
@@ -85,6 +87,7 @@ function initWebSocket()
 
 	socket.on("connecting", function(type)
 	{
+		document.title = "Joining room...";
 		console.log("Trying to connect via " + type + "...");
 	});
 
@@ -137,6 +140,17 @@ function initWebSocket()
 			keyboard: false,
 			backdrop: "static",
 		});
+	});
+
+	socket.on("config_update", function(data)
+	{
+		document.title = data.title + " - Synctron";
+
+		if (roomTopic !== data.topic)
+		{
+			roomTopic = data.topic;
+			chatAppend("<i><b>Topic:</b> " + roomTopic + "</i>");
+		}
 	});
 
 	socket.on("sync", function(video_time, is_playing)
@@ -240,23 +254,7 @@ function initWebSocket()
 
 	socket.on("chat_message", function(message, from_user)
 	{
-		var chatbox = $("#chatbox-textarea");
-
-		// Determine whether or not we're going to want to scroll to the bottom after we append the message.
-		var distFromBottom = (chatbox[0].scrollHeight - chatbox.scrollTop()) - chatbox.outerHeight();
-		var scrollToBottom = Math.abs(distFromBottom) <= 5;
-
-		// First, we need to make sure any HTML tags are escaped.
-		var escapedMsg = $("<div/>").text(message).html();
-
-		// Now, we create a <p> element for the message and append it to the chat box.
-		var msgElement = $("<p><b>" + from_user + ":</b>&nbsp;" + escapedMsg + "</p>")
-		chatbox.append(msgElement);
-
-		// Finally, if the chatbox was scrolled to the bottom before,
-		// we need to scroll it back to the bottom because we've added a new line.
-		if (scrollToBottom)
-			chatbox.scrollTop(chatbox[0].scrollHeight);
+		postChatMessage(message, from_user);
 	});
 
 	socket.on("error_occurred", function(errid, message)
@@ -917,4 +915,31 @@ function setStarred(starred, reshowTooltip)
 	$("#star-btn").attr("data-original-title", tiptext).tooltip("fixTitle");
 	if (reshowTooltip === true)
 		$("#star-btn").tooltip("show");
+}
+
+function postChatMessage(message, from_user)
+{
+	// Make sure any HTML tags are escaped.
+	var escapedMsg = $("<div/>").text(message).html();
+
+	// Now append it to the chat box.
+	chatAppend("<b>" + from_user + ":</b>&nbsp;" + escapedMsg);
+}
+
+function chatAppend(string)
+{
+	var chatbox = $("#chatbox-textarea");
+
+	// Determine whether or not we're going to want to scroll to the bottom after we append the message.
+	var distFromBottom = (chatbox[0].scrollHeight - chatbox.scrollTop()) - chatbox.outerHeight();
+	var scrollToBottom = Math.abs(distFromBottom) <= 5;
+
+	// Create a <p> element for the message and append it to the chat box.
+	var msgElement = $("<p>").html(string);
+	chatbox.append(msgElement);
+
+	// If the chatbox was scrolled to the bottom before,
+	// we need to scroll it back to the bottom because we've added a new line.
+	if (scrollToBottom)
+		chatbox.scrollTop(chatbox[0].scrollHeight);
 }

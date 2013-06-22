@@ -402,6 +402,9 @@ class Room(Base):
 	def emit_chat_message(self, message, from_user):
 		[user.chat_message(message, from_user) for user in self.users]
 
+	def emit_config_update(self):
+		[user.config_update(self) for user in self.users]
+
 
 class PlaylistEntry(Base):
 	"""

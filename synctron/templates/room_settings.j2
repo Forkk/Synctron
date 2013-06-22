@@ -1,0 +1,75 @@
+{% extends "base.j2" %}
+
+{% block title %}Room Settings - Synctron{% endblock %}
+
+{% block content %}
+<div class="row">
+	<div class="span12">
+		{% if alert_msg %}
+		<div id="page-alert" class="alert {{ "alert-" + alert_type if alert_type else "" }} {{ "hide" if alert_timeout else "" }}">
+			{{ alert_msg }}
+		</div>
+		{% endif %}
+
+		<form id="room-settings-form" class="form-horizontal" method="POST">
+			{{ form.csrf_token }}
+
+			<fieldset>
+				<legend>Room Information</legend>
+
+				{{ forms.input_field(form.title) }}
+
+				{{ forms.input_field(form.topic,
+					help="The topic is a small bit of text that will be displayed to everyone who joins the room.",
+				) }}
+
+				{{ forms.bool_field(form.is_private) }}
+
+			</fieldset>
+
+			<fieldset>
+				<legend>User Permissions</legend>
+
+				<div class="control-group">
+					<div class="controls">
+						{% for field in [
+							form.users_can_add,
+							form.users_can_remove,
+							form.users_can_move,
+							form.users_can_pause,
+							form.users_can_skip,
+						] %}
+						<label class="checkbox" for="{{ field.id }}">
+							{{ field() }} {{ field.label }}
+						</label>
+						{% endfor %}
+					</div>
+				</div>
+			</fieldset>
+
+			<hr />
+
+			<fieldset>
+				<button id="submit" type="submit" class="btn btn-primary">Save</button>
+			</fieldset>
+		</form>
+	</div>
+</div>
+{% endblock %}
+
+{% block js_body %}
+{{ super() }}
+
+{% if alert_msg and alert_timeout %}
+<script type="text/javascript">
+$(document).ready(function()
+{
+	$("#page-alert").slideDown();
+
+	setTimeout(function() {
+		$("#page-alert").slideUp();
+	}, {{ alert_timeout }});
+});
+</script>
+{% endif %}
+{% endblock %}

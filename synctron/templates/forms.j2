@@ -1,40 +1,49 @@
-{#
-	Generates the navbar shown at the top of the page.
-	
-	If username is specified, shows an account dropdown menu on the right. Otherwise, shows a log in and create account button.
+{# 
+	Renders a WTForms TextArea field.
 #}
-{% macro navbar() %}
-	<div class="navbar">
-		<div class="navbar-inner">
-			<a class="brand" href="/">Synctron</a>
-			<ul class="nav">
-				<li><a href="/">Home</a></li>
-			</ul>
+{% macro input_field(field, help=None, class=None, prepend=None) %}
+	<div id="{{ field.id }}-control-group" class="control-group {{ "error" if field.errors }}">
+		<label class="control-label" for="{{ field.id }}">{{ field.label }}</label>
+		<div class="controls">
+			{% if prepend %}
+			<div class="input-prepend">
+			<span class="add-on">{{ prepend }}</span>
+			{% endif %}
 
-			<ul class="nav pull-right">
-				{% if "username" not in session %}
+			{{ field(class=class) }}
 
-				<li><a href="/login">Log In</a></li>
-				<li><a href="/signup">Create Account</a></li>
+			{% if prepend %}</div>{% endif %}
 
-				{% else %}
+			{% if field.errors %}<span class="help-inline">{{ field.errors[0] }}</span>{% endif %}
+			{% if help %}<span class="help-block">{{ help }}</span>{% endif %}
+		</div>
+	</div>
+{% endmacro %}
 
-				<li><a href="/create_room">Create a Room</a></li>
+{#
+	Renders a WTForms BooleanField.
+#}
+{% macro bool_field(field, help=None) %}
+	<div class="control-group {{ "error" if field.errors }}">
+		<div class="controls">
+			<label class="checkbox" for="{{ field.id }}">
+				{{ field() }} {{ field.label }}
+			</label>
+			{% if field.errors %}<span class="help-inline">{{ field.errors[0] }}</span>{% endif %}
+			{% if help %}<span class="help-block">{{ help }}</span>{% endif %}
+		</div>
+	</div>
+{% endmacro %}
 
-				<li class="dropdown">
-					<a href="#" class="dropdown-toggle" data-toggle="dropdown">
-						{{ session["username"] }}
-						<b class="caret"></b>
-					</a>
-					<ul class="dropdown-menu">
-						<li><a href="#">Account Settings</a></li>
-						<li class="divider"></li>
-						<li><a href="/logout">Log Out</a></li>
-					</ul>
-				</li>
-
-				{% endif %}
-			</ul>
+{# 
+	Renders a WTForms RecaptchaField
+#}
+{% macro captcha_field(field) %}
+	<div class="control-group {{ "error" if field.errors }}">
+		<label class="control-label" for="{{ field.id }}">{{ field.label }}</label>
+		<div class="controls">
+			{{ field() }}
+			{% if field.errors %}<span class="help-inline">{{ field.errors[0] }}</span>{% endif %}
 		</div>
 	</div>
 {% endmacro %}

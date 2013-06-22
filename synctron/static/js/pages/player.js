@@ -149,7 +149,8 @@ function initWebSocket()
 		if (roomTopic !== data.topic)
 		{
 			roomTopic = data.topic;
-			chatAppend("<i><b>Topic:</b> " + roomTopic + "</i>");
+			if (roomTopic !== undefined && roomTopic !== null && roomTopic.length > 0)
+				chatAppend("<i><b>Topic:</b> " + roomTopic + "</i>");
 		}
 	});
 

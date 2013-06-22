@@ -343,7 +343,13 @@ class Room(Base):
 		Gets a list of dicts containing info about users in the room and passes it to emit_userlist_update.
 		"""
 		userlist = []
-		userlist = [u.info_dict(dbsession=self.dbsession) for u in self.users]
+		nameset = set()
+		for user in self.users:
+			uinfo = user.info_dict(dbsession=self.dbsession)
+			if uinfo["username"] not in nameset:
+				nameset.add(uinfo["username"])
+				userlist.append(uinfo)
+
 		self.emit_userlist_update(userlist)
 
 	def add_user(self, user):

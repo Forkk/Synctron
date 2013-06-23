@@ -48,7 +48,7 @@
 				</thead>
 
 				<tbody>
-					{% for room in popular_rooms %}
+					{% for room in popular_rooms[:10] %}
 					<tr>
 						<td><a href="/room/{{ room.slug }}">{{ room.title }}</a></td>
 						<td><a href="/room/{{ room.slug }}">{{ room.slug }}</a></td>

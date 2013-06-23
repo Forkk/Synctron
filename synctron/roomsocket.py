@@ -262,6 +262,8 @@ class RoomNamespace(BaseNamespace):
 		"""
 		Event called by the client to send a chat message to the room.
 		"""
+		message = message[:200]
+
 		room = self.get_room()
 		room.chat_message(message, self)
 

@@ -44,10 +44,6 @@ from roomlistsocket import RoomListNamespace
 # Import gevent stuff for our hacky little update rooms loop.
 from gevent import spawn, sleep as gevent_sleep
 
-# Some regexes...
-username_regex = re.compile(r"^[0-9A-Za-z \-\_]+$")
-roomslug_regex = re.compile(r"^[0-9A-Za-z\-\_]+$")
-
 
 # Some other modules containing other pages.
 import synctron.forms.account

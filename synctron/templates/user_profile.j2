@@ -29,10 +29,10 @@
 </div>
 
 <div class="row">
-	{% if user.show_rooms_starred %}
-	<div class='{{ "span6" if user.show_rooms_owned else "span12" }}'>
+	<div class="span6">
 		<div class="well">
 			<h3>Starred Rooms <small>Rooms this user has starred.</small></h3>
+			{% if user.show_rooms_starred %}
 			<table class="table table-condensed table-bordered">
 				<thead>
 					<tr>
@@ -52,14 +52,16 @@
 					{% endfor %}
 				</tbody>
 			</table>
+			{% else %}
+			<p>This user has disabled showing rooms they've starred own on their profile page.</p>
+			{% endif %}
 		</div>
 	</div>
-	{% endif %}
 
-	{% if user.show_rooms_owned %}
-	<div class='{{ "span6" if user.show_rooms_starred else "span12" }}'>
+	<div class="span6">
 		<div class="well">
 			<h3>Owned Rooms <small>Rooms this user owns.</small></h3>
+			{% if user.show_rooms_owned %}
 			<table class="table table-condensed table-bordered">
 				<thead>
 					<tr>
@@ -79,8 +81,10 @@
 					{% endfor %}
 				</tbody>
 			</table>
+			{% else %}
+			<p>This user has disabled showing rooms they own on their profile page.</p>
+			{% endif %}
 		</div>
 	</div>
-	{% endif %}
 </div>
 {% endblock %}

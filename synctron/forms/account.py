@@ -118,6 +118,48 @@ def logout():
 	return redirect(url_for("index"))
 
 
+########################
+## USER SETTINGS PAGE ##
+########################
+
+class UserSettingsForm(Form):
+	"""
+	Form for a user to change his/her settings.
+	"""
+
+	# General settings.
+	email = TextField("Email Address", [
+		validators.Required(message="You must enter your email address."),
+		validators.Email(message="That doesn't look like an email address."),
+	])
+
+	# Profile page settings.
+	show_rooms_owned = BooleanField("Show rooms I own on my profile page?")
+	show_rooms_starred = BooleanField("Show rooms I've starred on my profile page?")
+
+@app.route("/user/<username>/settings", methods=["GET", "POST"])
+def user_settings(username):
+	user = db.session.query(User).filter_by(name=username).first()
+
+	if user is None:
+		return render_template("error/generic.j2", head="Who is that?", message="I don't know anyone by that name.")
+
+	if "user" not in session or user.id != session["user"]:
+		return render_template("error/permission_denied.j2", message="You can't change someone else's settings.")
+
+	form = UserSettingsForm(obj=user)
+	message = None
+	msg_type = "info"
+	msg_timeout = None
+	if form.validate_on_submit():
+		form.populate_obj(user)
+		db.session.commit()
+		message = "Account settings saved successfully."
+		msg_type = "success"
+		msg_timeout = 3000
+	return render_template("account_settings.j2", form=form, alert_msg=message, alert_type=msg_type, alert_timeout=msg_timeout)
+
+
 #######################
 ## USER PROFILE PAGE ##
 #######################

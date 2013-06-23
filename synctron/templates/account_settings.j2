@@ -1,12 +1,12 @@
 {% extends "base.j2" %}
 
-{% block title %}Room Settings - Synctron{% endblock %}
+{% block title %}Account Settings - Synctron{% endblock %}
 
 {% block content %}
 <div class="row">
 	<div class="span12">
 		<div class="page-header">
-			<h1>Room Settings <small>Change your room's settings.</small></h1>
+			<h1>Account Settings <small>Change your account settings.</small></h1>
 		</div>
 
 		{% if alert_msg %}
@@ -19,29 +19,19 @@
 			{{ form.csrf_token }}
 
 			<fieldset>
-				<legend>Room Information</legend>
+				<legend>General</legend>
 
-				{{ forms.input_field(form.title) }}
-
-				{{ forms.input_field(form.topic,
-					help="The topic is a small bit of text that will be displayed to everyone who joins the room.",
-				) }}
-
-				{{ forms.bool_field(form.is_private) }}
-
+				{{ forms.input_field(form.email) }}
 			</fieldset>
 
 			<fieldset>
-				<legend>User Permissions</legend>
+				<legend>Profile Settings</legend>
 
 				<div class="control-group">
 					<div class="controls">
 						{% for field in [
-							form.users_can_add,
-							form.users_can_remove,
-							form.users_can_move,
-							form.users_can_pause,
-							form.users_can_skip,
+							form.show_rooms_owned,
+							form.show_rooms_starred,
 						] %}
 						<label class="checkbox" for="{{ field.id }}">
 							{{ field() }} {{ field.label }}

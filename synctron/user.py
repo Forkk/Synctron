@@ -18,13 +18,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from sqlalchemy import Table, Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Table, Column, Integer, String, Boolean, DateTime, ForeignKey, func
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.orderinglist import ordering_list
 
 from synctron import app, db
 from synctron.room import Base, stars_association_table
+
+from datetime import datetime
 
 class User(Base):
 	"""
@@ -51,7 +53,19 @@ class User(Base):
 	# Rooms that this user has starred.
 	rooms_starred = relationship("Room", secondary=stars_association_table)
 
+	# The date the account was created.
+	account_created = Column(DateTime, nullable=False)
+
+	# The last date the user was active.
+	last_activity = Column(DateTime, nullable=True)
+
+	# Profile settings.
+	show_rooms_joined = Column(Boolean, nullable=False, default=True)
+	show_rooms_owned = Column(Boolean, nullable=False, default=True)
+	show_rooms_starred = Column(Boolean, nullable=False, default=True)
+
 	def __init__(self, name, password, email):
 		self.name = name
 		self.password = password
 		self.email = email
+		self.account_created = datetime.now()

@@ -121,8 +121,7 @@ def room_settings(slug):
 
 	# Error if the user doesn't own the room.
 	if room.owner != user:
-		return render_template("error/generic.j2", head="I'm sorry %s, I'm afraid I can't do that." % user.name, 
-			message="You can't change settings on a room you don't own.")
+		return render_template("error/permission_denied.j2", message="You can't change settings on a room you don't own.")
 
 	form = RoomSettingsForm(obj=room)
 	message = None

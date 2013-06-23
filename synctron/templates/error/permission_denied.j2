@@ -1,0 +1,15 @@
+{% extends "error/generic.j2" %}
+
+{% block title %}Access Denied - Synctron{% endblock %}
+
+{% block error_head %}I'm sorry{{ ", " + session["username"] + "." if "username" in session else "." }} I'm afraid I can't do that.{% endblock %}
+
+{% block error_content %}
+
+{% if message %}
+<p>{{ message }}</p>
+{% else %}
+<p>You're not allowed to do that.</p>
+{% endif %}
+
+{% endblock %}

@@ -32,6 +32,8 @@ from wtforms import BooleanField, TextField, PasswordField, ValidationError, val
 from passlib.hash import sha512_crypt
 from hashlib import sha384
 
+from datetime import datetime
+
 #################
 ## SIGNUP FORM ##
 #################
@@ -114,3 +116,19 @@ def logout():
 	session.pop("user", None)
 	session.pop("username", None)
 	return redirect(url_for("index"))
+
+
+#######################
+## USER PROFILE PAGE ##
+#######################
+
+@app.route("/user/<username>")
+def user_profile(username):
+	"""A user's profile page."""
+	user = db.session.query(User).filter_by(name=username).first()
+
+	# No user by that name.
+	if user is None:
+		return render_template("error/generic.j2", head="Who is that?", message="I don't know anyone by that name.")
+
+	return render_template("user_profile.j2", user=user)

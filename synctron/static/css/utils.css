@@ -24,8 +24,7 @@
 	margin-bottom: 2px;
 }
 
-td.expand,
-th.expand
+.expand
 {
 	width: 100%;
 }

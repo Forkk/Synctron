@@ -1,0 +1,86 @@
+{% extends "base.j2" %}
+
+{% block title %}{{ user.name }}'s Profile - Synctron{% endblock %}
+
+{% block content %}
+<div class="row">
+	<div class="span12">
+		<div class="page-header"><h1>{{ user.name }}'s Profile</h1></div>
+	</div>
+</div>
+
+<div class="row">
+	<div class="span6">
+		<div class="well">
+			<h3>User Info</h3>
+			<p><b>User ID:</b> <span class="monospace">{{ user.id }}</span></p></p>
+			<p><b>Username:</b> {{ user.name }}</p></p>
+			<p><b>Registered On:</b> {{ user.account_created }}</p>
+			<p><b>Last Active:</b> {{ user.last_activity if user.last_activity else "Unknown" }}</p>
+		</div>
+	</div>
+</div>
+
+
+<div class="row">
+	<div class="span12">
+		<h1 class="page-header">Rooms</h1>
+	</div>
+</div>
+
+<div class="row">
+	{% if user.show_rooms_starred %}
+	<div class='{{ "span6" if user.show_rooms_owned else "span12" }}'>
+		<div class="well">
+			<h3>Starred Rooms <small>Rooms this user has starred.</small></h3>
+			<table class="table table-condensed table-bordered">
+				<thead>
+					<tr>
+						<th class="room-title-col">Room Title</th>
+						<th class="room-slug-col">Room Slug</th>
+					</tr>
+				</thead>
+
+				<tbody>
+					{% for room in user.rooms_starred %}
+					{% if not room.is_private %}
+					<tr>
+						<td><a href="/room/{{ room.slug }}">{{ room.title }}</a></td>
+						<td><a href="/room/{{ room.slug }}">{{ room.slug }}</a></td>
+					</tr>
+					{% endif %}
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+	{% endif %}
+
+	{% if user.show_rooms_owned %}
+	<div class='{{ "span6" if user.show_rooms_starred else "span12" }}'>
+		<div class="well">
+			<h3>Owned Rooms <small>Rooms this user owns.</small></h3>
+			<table class="table table-condensed table-bordered">
+				<thead>
+					<tr>
+						<th class="room-title-col">Room Title</th>
+						<th class="room-slug-col">Room Slug</th>
+					</tr>
+				</thead>
+
+				<tbody>
+					{% for room in user.owned_rooms %}
+					{% if not room.is_private %}
+					<tr>
+						<td><a href="/room/{{ room.slug }}">{{ room.title }}</a></td>
+						<td><a href="/room/{{ room.slug }}">{{ room.slug }}</a></td>
+					</tr>
+					{% endif %}
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+	{% endif %}
+</div>
+{% endblock %}

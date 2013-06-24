@@ -92,7 +92,7 @@ def star_room(room_slug):
 
 	# If they're not logged in, return an error.
 	if user is None:
-		return json.dumps({ 
+		return json.dumps({
 			"error": "not_logged_in", 
 			"error_msg": "You must be logged in to star a room.", 
 			"starred": False,

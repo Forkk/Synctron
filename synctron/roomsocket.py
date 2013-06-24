@@ -267,6 +267,24 @@ class RoomNamespace(BaseNamespace):
 		room = self.get_room()
 		room.chat_message(message, self)
 
+	@socketevent
+	@dbaccess
+	def on_kick_user(self, username, message):
+		"""
+		Event called by the client to kick a user.
+		"""
+		if not self.is_admin:
+			self.status_message("Only admins and room owners can kick people from rooms.", "Error")
+			return
+
+		room = self.get_room()
+		for user in room.users:
+			if user.name == username:
+				# Kick the user.
+				room.emit_status_message("%s kicked %s from the room. Reason: %s" % (self.name, user.name, message), "Status")
+				user.kick(self, message)
+				return
+		self.status_message("User not found: %s" % username, "Error")
 
 	##############
 	# PROPERTIES #
@@ -469,6 +487,13 @@ class RoomNamespace(BaseNamespace):
 		"""
 		self.emit("chat_message", message, from_user.name)
 
+	def status_message(self, message, msgtype):
+		"""
+		Event fired to send a "status message" to the client.
+		This will be printed out in the client's chat.
+		"""
+		self.emit("status_message", message, msgtype)
+
 	def config_update(self, room):
 		"""
 		Event fired when room settings change.
@@ -482,3 +507,10 @@ class RoomNamespace(BaseNamespace):
 			"users_can_pause": room.users_can_pause,
 			"users_can_skip": room.users_can_skip,
 		})
+
+	def kick(self, by, message):
+		"""
+		Emits the kick event, kicking this user from the room and then disconnects the socket.
+		"""
+		self.emit("kicked", by.name, message)
+		self.disconnect()

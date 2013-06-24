@@ -258,6 +258,22 @@ function initWebSocket()
 		postChatMessage(message, from_user);
 	});
 
+	socket.on("status_message", function(message, type)
+	{
+		postStatusMessage(message, type);
+	});
+
+	socket.on("kicked", function(by, message)
+	{
+		$("#kick-by").text("You were kicked from the room by " + by + ".");
+		$("#kick-reason").text("Reason: " + message);
+		$("#kicked-modal").modal({
+			keyboard: false,
+			backdrop: "static",
+		});
+		socket.disconnect();
+	});
+
 	socket.on("error_occurred", function(errid, message)
 	{
 		alert("Error: " + message);
@@ -787,7 +803,32 @@ $(document).ready(function()
 	$("#chat-input-form").submit(function(evt)
 	{
 		evt.preventDefault();
-		socket.emit("chat_message", $("#chat-input").val());
+
+		var chatInput = $("#chat-input").val();
+
+		if (chatInput.charAt(0) == "/")
+		{
+			var cmdTokens = chatInput.substring(1).match(/(?:[^\s"]+|"[^"]*")+/g).
+				map(function(token) { return token.replace(/(^")|("$)/g, ""); });
+
+			switch (cmdTokens[0])
+			{
+			case "kick":
+				if (cmdTokens.length < 2)
+					postStatusMessage("kick &lt;username&gt; [reason]", "Usage");
+				else
+					socket.emit("kick_user", cmdTokens[1], cmdTokens.length > 2 ? cmdTokens.slice(2).join(" ") : "No reason given.")
+				break;
+
+			default:
+				postStatusMessage("Command not found: " + cmdTokens[0] + ".", "Error");
+			}
+		}
+		else
+		{
+			socket.emit("chat_message", $("#chat-input").val());
+		}
+
 		$("#chat-input").val("");
 	});
 
@@ -925,6 +966,11 @@ function postChatMessage(message, from_user)
 
 	// Now append it to the chat box.
 	chatAppend("<b>" + from_user + ":</b>&nbsp;" + escapedMsg);
+}
+
+function postStatusMessage(message, type)
+{
+	chatAppend("<i><b>" + type + ":</b> " + message + "</i>");
 }
 
 function chatAppend(string)

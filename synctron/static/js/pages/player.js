@@ -253,9 +253,9 @@ function initWebSocket()
 		updateUserListTable();
 	});
 
-	socket.on("chat_message", function(message, from_user)
+	socket.on("chat_message", function(message, from_user, action)
 	{
-		postChatMessage(message, from_user);
+		postChatMessage(message, from_user, action);
 	});
 
 	socket.on("status_message", function(message, type)
@@ -803,33 +803,9 @@ $(document).ready(function()
 	$("#chat-input-form").submit(function(evt)
 	{
 		evt.preventDefault();
-
-		var chatInput = $("#chat-input").val();
-
-		if (chatInput.charAt(0) == "/")
-		{
-			var cmdTokens = chatInput.substring(1).match(/(?:[^\s"]+|"[^"]*")+/g).
-				map(function(token) { return token.replace(/(^")|("$)/g, ""); });
-
-			switch (cmdTokens[0])
-			{
-			case "kick":
-				if (cmdTokens.length < 2)
-					postStatusMessage("kick &lt;username&gt; [reason]", "Usage");
-				else
-					socket.emit("kick_user", cmdTokens[1], cmdTokens.length > 2 ? cmdTokens.slice(2).join(" ") : "No reason given.")
-				break;
-
-			default:
-				postStatusMessage("Command not found: " + cmdTokens[0] + ".", "Error");
-			}
-		}
-		else
-		{
-			socket.emit("chat_message", $("#chat-input").val());
-		}
-
+		var chatInput = $("#chat-input").val()
 		$("#chat-input").val("");
+		handleChatInput(chatInput);
 	});
 
 	// Handle window resize
@@ -959,18 +935,32 @@ function setStarred(starred, reshowTooltip)
 		$("#star-btn").tooltip("show");
 }
 
-function postChatMessage(message, from_user)
+
+/////////////////////////////
+//////// CHAT SYSTEM ////////
+/////////////////////////////
+
+//////////////////
+//// CHAT BOX ////
+//////////////////
+// Functions relating to posting things in the chat box.
+
+function postChatMessage(message, from_user, action)
 {
 	// Make sure any HTML tags are escaped.
 	var escapedMsg = $("<div/>").text(message).html();
 
 	// Now append it to the chat box.
-	chatAppend("<b>" + from_user + ":</b>&nbsp;" + escapedMsg);
+	if (action === true)
+		chatAppend("<b>" + from_user + "</b> " + escapedMsg);
+	else
+		chatAppend("<b>" + from_user + ":</b>&nbsp;" + escapedMsg);
 }
 
 function postStatusMessage(message, type)
 {
-	chatAppend("<i><b>" + type + ":</b> " + message + "</i>");
+	var escapedMsg = $("<div/>").text(message).html();
+	chatAppend("<i><b>" + type + ":</b> " + escapedMsg + "</i>");
 }
 
 function chatAppend(string)
@@ -989,4 +979,125 @@ function chatAppend(string)
 	// we need to scroll it back to the bottom because we've added a new line.
 	if (scrollToBottom)
 		chatbox.scrollTop(chatbox[0].scrollHeight);
+}
+
+
+///////////////////
+//// INPUT BOX ////
+///////////////////
+// Functions for handling things typed into the chat input box.
+
+function handleChatInput(input)
+{
+	if (input.charAt(0) == "/")
+	{
+		// Parse the command arguments.
+		var cmdString = input.substring(1);
+		var cmdTokens = cmdString.match(/(?:[^\s"]+|"[^"]*")+/g).
+			map(function(token) { return token.replace(/(^")|("$)/g, ""); });
+
+		var command = cmdTokens[0];
+		if (chatCommands[command] !== undefined)
+		{
+			try
+			{
+				chatCommands[command](cmdTokens.slice(1), cmdString, false);
+			}
+			catch (e)
+			{
+				if (e instanceof CommandException)
+				{
+					postStatusMessage(e.command + ": " + e.message, "Error");
+				}
+				else throw e;
+			}
+		}
+		else
+			postStatusMessage("Command not found: " + command + ". Try /help");
+	}
+	else
+	{
+		socket.emit("chat_message", input, false);
+	}
+}
+
+// Functions corresponding to chat commands.
+// Each takes 3 arguments:
+// args: Array of arguments passed to the command.
+// cmdString: The full string that was entered into the text box (minus the leading slash)
+// getHelp: If true, the function should simply return a string specifying information about the command.
+var chatCommands =
+{
+	kick: function(args, cmdString, getHelp)
+	{
+		var cmdName = "kick";
+		var cmdHelp = "kick <username> [reason...] - Kicks the given user from the room.";
+
+		if (getHelp)
+			return cmdHelp;
+
+		var username = args[0];
+		var reason;
+
+		if (username === undefined)
+			throw new CommandException(cmdName, "Username not specified.");
+
+		if (args.length > 1)
+			// The reason is everything after the space after the username in the command.
+			// Yeah, it's hacky...
+			reason = cmdString.substring(cmdString.indexOf(" ", cmdString.indexOf(username) + username.length) + 1);
+		else
+			reason = "No reason given.";
+
+		socket.emit("kick_user", username, reason);
+	},
+
+	me: function(args, cmdString, getHelp)
+	{
+		var cmdName = "me";
+		var cmdHelp = "me action...";
+
+		if (getHelp)
+			return cmdHelp;
+
+		var action = cmdString.slice(cmdString.indexOf(cmdName) + cmdName.length + 1).strip();
+
+		if (action.length > 0)
+			socket.emit("chat_message", action, true);
+	},
+
+	help: function(args, cmdString, getHelp)
+	{
+		var cmdName = "help";
+		var cmdHelp = "help [command] - Returns help for the given command, or all commands if one isn't specified.";
+
+		if (getHelp)
+			return cmdHelp;
+
+		var getHelpFor = args[0];
+
+		if (getHelpFor === undefined)
+		{
+			postStatusMessage("Commands: ", "Help");
+			for (var cmd in chatCommands)
+			{
+				postStatusMessage(chatCommands[cmd]([], "", true), "Help");
+			}
+		}
+		else
+		{
+			var cmdFunc = chatCommands[getHelpFor]
+			if (cmdFunc === undefined)
+				throw new CommandException(cmdName, "Can't get help for " + getHelpFor + ". Command doesn't exist.");
+			else
+				postStatusMessage(cmdFunc([], "", true), "Help");
+		}
+	},
+};
+
+function CommandException(command, message)
+{
+	this.message = message;
+	this.name = "CommandException";
+	this.command = command;
 }

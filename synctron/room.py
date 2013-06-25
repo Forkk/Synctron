@@ -370,13 +370,13 @@ class Room(Base):
 	#### CHAT OPERATIONS ####
 	# Operations having to do with chat.
 
-	def chat_message(self, message, user, force_post=False):
+	def chat_message(self, message, user, force_post=False, action=False):
 		"""
 		Posts the given message in chat from the given user.
 		Does nothing if message is empty, unless force_post is set to true True.
 		"""
 		if len(message) > 0 or force_post:
-			self.emit_chat_message(message, user)
+			self.emit_chat_message(message, user, action=action)
 
 
 	##########
@@ -405,8 +405,8 @@ class Room(Base):
 	def emit_userlist_update(self, userlist):
 		[user.userlist_update(userlist, dbsession=self.dbsession) for user in self.users]
 
-	def emit_chat_message(self, message, from_user):
-		[user.chat_message(message, from_user) for user in self.users]
+	def emit_chat_message(self, message, from_user, action=False):
+		[user.chat_message(message, from_user, action=action) for user in self.users]
 
 	def emit_status_message(self, message, msgtype):
 		[user.status_message(message, msgtype) for user in self.users]

@@ -258,14 +258,14 @@ class RoomNamespace(BaseNamespace):
 
 	@socketevent
 	@dbaccess
-	def on_chat_message(self, message):
+	def on_chat_message(self, message, action):
 		"""
 		Event called by the client to send a chat message to the room.
 		"""
 		message = message[:200]
 
 		room = self.get_room()
-		room.chat_message(message, self)
+		room.chat_message(message, self, action=action)
 
 	@socketevent
 	@dbaccess
@@ -481,11 +481,12 @@ class RoomNamespace(BaseNamespace):
 				isyou=userinfo["username"] == self.name) 
 			for userinfo in userlist])
 
-	def chat_message(self, message, from_user):
+	def chat_message(self, message, from_user, action=False):
 		"""
 		Event fired when a chat message is sent out.
+		If action is True, the message will be an action (/me).
 		"""
-		self.emit("chat_message", message, from_user.name)
+		self.emit("chat_message", message, from_user.name, action)
 
 	def status_message(self, message, msgtype):
 		"""

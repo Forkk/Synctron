@@ -11,11 +11,6 @@
 venv/
 
 
-# Dotcloud stuff
-.dotcloud
-dotcloudconf.py
-
-
 # Other bullshit
 Thumbs.db
 DS_Store

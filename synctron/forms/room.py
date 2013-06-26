@@ -71,7 +71,7 @@ def create_room():
 		form = CreateRoomForm()
 		if form.validate_on_submit():
 			room = Room(request.form["slug"], request.form["title"])
-			room.is_private = "is-private" in request.form and request.form["is-private"] == "on"
+			room.is_private = form.is_private.data
 			room.owner = user
 			db.session.add(room)
 			db.session.commit()

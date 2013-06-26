@@ -92,9 +92,13 @@ class RoomNamespace(BaseNamespace):
 			del kwargs["silent"]
 
 		if "room" in self.session:
-			room = self.get_room()
-			room.remove_user(self)
-			broadcast_room_user_list_update()
+			self.session["dbsession"] = dbsession = db.Session(db.engine)
+			try:
+				room = self.get_room()
+				room.remove_user(self)
+				broadcast_room_user_list_update()
+			finally:
+				dbsession.close()
 
 		BaseNamespace.disconnect(self, *args, **kwargs)
 
@@ -475,6 +479,7 @@ class RoomNamespace(BaseNamespace):
 		"""
 		Sends the userlist to the client.
 		"""
+		print "update userlist for " + self.name
 		self.emit("userlist_update", 
 			[dict(
 				userinfo, 

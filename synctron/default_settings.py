@@ -3,6 +3,9 @@ PORT = 8000
 # URI for the database to connect to.
 SQLALCHEMY_DATABASE_URI = "mysql://sync@127.0.0.1/sync"
 
+# Redis info.
+REDIS_URL = "redis://localhost:6379/0"
+
 # Flask's secret key. This should be changed in production deployments.
 SECRET_KEY = "defaultsecretthatshouldbechangedwhenusedinproduction"
 

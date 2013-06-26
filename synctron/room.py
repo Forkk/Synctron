@@ -25,9 +25,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.sql.expression import func
 
-from synctron import app, db, connections
+from synctron import app, db, connections, red, workerid
 from synctron.vidinfo import get_video_info
 from synctron.database import Base, admin_association_table, stars_association_table
+from synctron.user import User
 
 import time
 from copy import copy
@@ -46,6 +47,34 @@ def get_entry_info(entry):
 	info["added_by"] = entry.added_by
 	return info
 
+
+def user_info_dict(user, room):
+	"""
+	Returns a user info dict for the given user and the given room.
+	User should be a database entry.
+	"""
+	return {
+		"username": user.name,
+		"isguest": False,
+		"isadmin": user in room.admins,
+		"isowner": room.owner == user,
+	}
+
+def guest_info_dict(guest_name, room):
+	"""
+	Returns a user info dict for a guest user with the given guest name.
+	"""
+	return {
+		"username": guest_name,
+		"isguest": True,
+		"isadmin": False,
+		"isowner": False,
+	}
+
+
+# Dict for caching user lists. Updated every few seconds by the userset greenlet.
+userset_dict = {}
+loaded_rooms = set()
 
 class Room(Base):
 	"""
@@ -136,11 +165,29 @@ class Room(Base):
 			return self.last_position
 
 	@property
-	def users(self):
-		"""Generator listing users in the room."""
+	def connected_users(self):
+		"""Generator listing users connected to this room on this worker."""
 		for user in connections:
 			if "room" in user.session and user.session["room"] == self.slug:
 				yield user
+
+	@property
+	def users(self):
+		"""Generator for listing the usernames of users who are connected to this room on all workers."""
+		if self.slug in userset_dict:
+			for user in userset_dict[self.slug]:
+				yield user
+
+	@property
+	def user_info_list(self):
+		"""Generator that lists user info dicts for each user in the room."""
+		for username in self.users:
+			if username.startswith("Guest "):
+				yield guest_info_dict(username, self)
+
+			userdata = self.dbsession.query(User).filter_by(name=username).first()
+			if userdata is not None:
+				yield user_info_dict(userdata, self)
 
 	@property
 	def video_is_playing(self):
@@ -342,15 +389,8 @@ class Room(Base):
 		"""
 		Gets a list of dicts containing info about users in the room and passes it to emit_userlist_update.
 		"""
-		userlist = []
-		nameset = set()
-		for user in self.users:
-			uinfo = user.info_dict(dbsession=self.dbsession)
-			if uinfo["username"] not in nameset:
-				nameset.add(uinfo["username"])
-				userlist.append(uinfo)
-
-		self.emit_userlist_update(userlist)
+		userlist_data = [user for user in self.user_info_list]
+		self.emit_userlist_update(userlist_data)
 
 	def add_user(self, user):
 		"""
@@ -358,12 +398,16 @@ class Room(Base):
 		"""
 		user.playlist_update([get_entry_info(entry) for entry in self.playlist])
 		user.video_changed(self.playlist_position, self.current_video_id)
+		userset_update()
 		self.userlist_update()
 
 	def remove_user(self, user):
 		"""
 		Removes a user from the room and emits a userlist update.
 		"""
+		uset_key = "room:%s:%s" % (self.slug, str(workerid))
+		red.srem(uset_key, user.name)
+		userset_update()
 		self.userlist_update()
 
 
@@ -385,34 +429,34 @@ class Room(Base):
 	# Code relating to the room's events that are passed to the connected users.
 
 	def emit_synchronize(self, video_time, is_playing):
-		[user.synchronize(video_time, is_playing) for user in self.users]
+		[user.synchronize(video_time, is_playing) for user in self.connected_users]
 
 	def emit_video_changed(self, playlist_position, video_id):
-		[user.video_changed(playlist_position, video_id) for user in self.users]
+		[user.video_changed(playlist_position, video_id) for user in self.connected_users]
 
 	def emit_playlist_update(self, entries):
-		[user.playlist_update(entries) for user in self.users]
+		[user.playlist_update(entries) for user in self.connected_users]
 
 	def emit_video_added(self, entry, index):
-		[user.video_added(entry, index) for user in self.users]
+		[user.video_added(entry, index) for user in self.connected_users]
 
 	def emit_videos_removed(self, indices):
-		[user.videos_removed(indices) for user in self.users]
+		[user.videos_removed(indices) for user in self.connected_users]
 
 	def emit_video_moved(self, old_index, new_index):
-		[user.video_moved(old_index, new_index) for user in self.users]
+		[user.video_moved(old_index, new_index) for user in self.connected_users]
 
 	def emit_userlist_update(self, userlist):
-		[user.userlist_update(userlist, dbsession=self.dbsession) for user in self.users]
+		[user.userlist_update(userlist, dbsession=self.dbsession) for user in self.connected_users]
 
 	def emit_chat_message(self, message, from_user, action=False):
-		[user.chat_message(message, from_user, action=action) for user in self.users]
+		[user.chat_message(message, from_user, action=action) for user in self.connected_users]
 
 	def emit_status_message(self, message, msgtype):
-		[user.status_message(message, msgtype) for user in self.users]
+		[user.status_message(message, msgtype) for user in self.connected_users]
 
 	def emit_config_update(self):
-		[user.config_update(self) for user in self.users]
+		[user.config_update(self) for user in self.connected_users]
 
 
 class PlaylistEntry(Base):
@@ -439,3 +483,88 @@ class PlaylistEntry(Base):
 	def __init__(self, vid, by=None):
 		self.video_id = vid
 		self.added_by = by
+
+
+from gevent import sleep as gevent_sleep
+
+def userset_greenlet():
+	"""
+	Greenlet that polls redis for changes in the user sets of each room.
+	This is done by calling the userset update function every few seconds.
+	"""
+	while True:
+		gevent_sleep(5)
+		try:
+			userset_update()
+		except:
+			app.logger.error("Exception in user set polling greenlet.", exc_info=True)
+
+def userset_update():
+	global userset_dict
+	uset_hash_key = "worker:" + str(workerid)
+	uset_hash = red.hgetall(uset_hash_key)
+
+	# Renew the TTL for this worker's user set hash.
+	red.expire(uset_hash_key, 30)
+
+	# Once the user set hash's TTL has been renewed, we update our user set.
+	temp_uset_dict = {}
+	for user in connections:
+		if "room" in user.session:
+			room_slug = user.session["room"]
+			if room_slug not in temp_uset_dict:
+				temp_uset_dict[room_slug] = set()
+			temp_uset_dict[room_slug].add(user.name)
+
+	for room_slug, uset in temp_uset_dict.iteritems():
+		# Add the user to the user list on redis.
+		# First, add the user to this room's user set for the current worker.
+		uset_key = "room:%s:%s" % (room_slug, str(workerid))
+		red.delete(uset_key)
+		[red.sadd(uset_key, user) for user in uset]
+
+		# Next, add that user set's key to the room's user set list.
+		red.sadd("room:%s" % room_slug, uset_key)
+
+		# Also make sure the room's slug is in the rooms set.
+		red.sadd("rooms", room_slug)
+
+		# And finally, add the user set's key to the worker's user set list.
+		red.hset("worker:%s" % str(workerid), room_slug, uset_key)
+
+		# Also, make sure we set expire times.
+		red.expire(uset_key, 30)
+
+
+	# Now, we check for changes to the user sets.
+	rooms_set = red.smembers("rooms")
+
+	# First, we find and update the user sets that have changed.
+	# While we do this, we also add anything to our local rooms dict that isn't already in it.
+	lists_changed = []
+	for room_slug in rooms_set:
+		uset_list = red.smembers("room:%s" % room_slug)
+		local_set = userset_dict[room_slug] if room_slug in userset_dict else set()
+		remote_set = red.sunion(uset_list) if len(uset_list) > 0 else set()
+		if local_set != remote_set:
+			if room_slug in userset_dict: del userset_dict[room_slug]
+			userset_dict[room_slug] = remote_set
+			lists_changed.append(room_slug)
+		for uset in uset_list:
+			if red.scard(uset) <= 0:
+				red.srem("room:%s" % room_slug, uset)
+
+	# Rooms in the local rooms dict that are no longer in the rooms hash.
+	rooms_removed = set(userset_dict.keys()) - rooms_set
+	for room_slug in rooms_removed:
+		del userset_dict[room_slug]
+		lists_changed.append(room_slug)
+
+	dbsession = db.Session(db.engine)
+	try:
+		for room_slug in lists_changed:
+			room = dbsession.query(Room).filter_by(slug=room_slug).first()
+			if room is not None:
+				room.userlist_update()
+	finally:
+		dbsession.close()

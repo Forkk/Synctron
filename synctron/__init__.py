@@ -21,9 +21,13 @@
 from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy
 
-from gevent import monkey
+from gevent import monkey, spawn as gevent_spawn
 
 from synctron.sessioninterface import ItsdangerousSessionInterface
+
+from redis import StrictRedis
+
+import uuid
 
 monkey.patch_all()
 
@@ -33,10 +37,23 @@ app.config.from_envvar("SYNC_SETTINGS")
 
 app.session_interface = ItsdangerousSessionInterface()
 
+app.logger.info("Initializing SQLAlchemy...")
 db = SQLAlchemy(app)
+
+# A unique identifier for this worker/process.
+# This is used to identify this process's user sets within redis.
+app.logger.info("Generating worker UUID...")
+workerid = uuid.uuid4()
+
+app.logger.info("Loading redis...")
+red = StrictRedis.from_url(app.config.get("REDIS_URL"))
 
 # Stupid array for keeping track of connected users.
 # It has to be in here to prevent stupid circular imports.
 connections = []
 
 import synctron.views
+
+from synctron.room import userset_greenlet
+app.logger.info("Starting userset polling...")
+gevent_spawn(userset_greenlet)

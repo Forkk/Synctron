@@ -1,7 +1,6 @@
 {% extends "base.j2" %}
 
-{% block title %}{{ room_slug }} - Synctron{% endblock %}
-{% block chartbeat_title %}"{{ room_slug }} - Synctron"{% endblock %}
+{% set title = room_slug + " - Synctron" %}
 
 {% block css_head %}
 {{ super() }}

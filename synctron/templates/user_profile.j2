@@ -1,6 +1,6 @@
 {% extends "base.j2" %}
 
-{% block title %}{{ user.name }}'s Profile - Synctron{% endblock %}
+{% set title = user.name + "'s Profile - Synctron" %}
 
 {% block content %}
 <div class="row">

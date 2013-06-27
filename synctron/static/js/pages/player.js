@@ -1061,7 +1061,7 @@ var chatCommands =
 		if (getHelp)
 			return cmdHelp;
 
-		var action = cmdString.slice(cmdString.indexOf(cmdName) + cmdName.length + 1).strip();
+		var action = $.trim(cmdString.slice(cmdString.indexOf(cmdName) + cmdName.length + 1));
 
 		if (action.length > 0)
 			socket.emit("chat_message", action, true);

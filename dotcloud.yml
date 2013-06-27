@@ -17,3 +17,6 @@ www:
 
 data:
     type: mysql
+
+redis:
+    type: redis

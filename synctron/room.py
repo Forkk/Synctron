@@ -331,7 +331,8 @@ class Room(Base):
 		if self.video_is_playing:
 			current = self.playlist[self.playlist_position]
 		shuffle(self.playlist)
-		self.playlist_position = self.playlist.index(current)
+		if current is not None:
+			self.playlist_position = self.playlist.index(current)
 		self.save()
 		self.pub_plist_update()
 		self.pub_video_changed()

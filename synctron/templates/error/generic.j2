@@ -1,6 +1,8 @@
 {% extends "base.j2" %}
 
-{% block title %}Error - Synctron{% endblock %}
+{% if not title %}
+{% set title = "Error - Synctron" %}
+{% endif %}
 
 {% block content %}
 <h1>{% block error_head %}{% if head %}{{ head }}{% else %}Uh oh!{% endif %}{% endblock %}</h1>

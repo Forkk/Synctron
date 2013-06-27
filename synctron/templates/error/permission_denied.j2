@@ -1,6 +1,6 @@
 {% extends "error/generic.j2" %}
 
-{% block title %}Access Denied - Synctron{% endblock %}
+{% set title = "Access Denied - Synctron" %}
 
 {% block error_head %}I'm sorry{{ ", " + session["username"] + "." if "username" in session else "." }} I'm afraid I can't do that.{% endblock %}
 

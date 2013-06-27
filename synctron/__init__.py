@@ -57,3 +57,5 @@ import synctron.views
 from synctron.room import userset_greenlet
 app.logger.info("Starting userset polling...")
 gevent_spawn(userset_greenlet)
+
+import synctron.redis_pubsub

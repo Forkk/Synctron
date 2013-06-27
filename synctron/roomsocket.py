@@ -285,7 +285,7 @@ class RoomNamespace(BaseNamespace):
 		for user in room.users:
 			if user.name == username:
 				# Kick the user.
-				room.emit_status_message("%s kicked %s from the room. Reason: %s" % (self.name, user.name, message), "Status")
+				room.pub_status_message("%s kicked %s from the room. Reason: %s" % (self.name, user.name, message), "Status")
 				user.kick(self, message)
 				return
 		self.status_message("User not found: %s" % username, "Error")
@@ -491,7 +491,7 @@ class RoomNamespace(BaseNamespace):
 		Event fired when a chat message is sent out.
 		If action is True, the message will be an action (/me).
 		"""
-		self.emit("chat_message", message, from_user.name, action)
+		self.emit("chat_message", message, from_user["username"], action)
 
 	def status_message(self, message, msgtype):
 		"""

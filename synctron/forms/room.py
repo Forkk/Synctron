@@ -134,5 +134,5 @@ def room_settings(slug):
 		message = "Room settings saved successfully."
 		msg_type = "success"
 		msg_timeout = 3000
-		room.emit_config_update()
+		room.pub_config_update()
 	return render_template("room_settings.j2", form=form, alert_msg=message, alert_type=msg_type, alert_timeout=msg_timeout)

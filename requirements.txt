@@ -22,6 +22,6 @@ isodate==0.4.9
 itsdangerous==0.21
 passlib==1.6.1
 python-gflags==2.0
-redis==2.7.6
+-e git+https://github.com/andymccurdy/redis-py.git@pubsub#egg=redis
 requests==1.2.0
 wsgiref==0.1.2

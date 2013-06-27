@@ -22,13 +22,14 @@ from synctron import app
 from socketio.server import SocketIOServer
 from gevent import monkey
 import werkzeug.serving
+import sys
 
 monkey.patch_all() # May need more bananas...
 
 @werkzeug.serving.run_with_reloader
 def run_dev_server():
 	app.debug = True
-	port = 8000
+	port = int(sys.argv[1]) # THIS IS FOR TESTING, REMEMBER TO REMOVE int
 	SocketIOServer(('', port), app, resource="socket.io").serve_forever()
 	app.run(host = "localhost", port = 8000, debug = True)
 

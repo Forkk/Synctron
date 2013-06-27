@@ -33,6 +33,7 @@ from synctron.user import User
 import time
 from copy import copy
 from random import shuffle
+import json
 
 def get_entry_info(entry):
 	"""
@@ -229,7 +230,7 @@ class Room(Base):
 		self.start_timestamp = time.time()
 		self.is_playing = True
 		self.save()
-		self.emit_synchronize(self.current_position, self.is_playing)
+		self.pub_synchronize()
 
 	def pause(self):
 		"""
@@ -241,7 +242,7 @@ class Room(Base):
 		self.last_position = current_position if current_position >= 0 else 0
 		self.is_playing = False
 		self.save()
-		self.emit_synchronize(current_position, self.is_playing)
+		self.pub_synchronize()
 
 	def seek(self, seek_time):
 		"""
@@ -251,7 +252,7 @@ class Room(Base):
 		self.start_time = time.time()
 		self.last_position = int(seek_time)
 		self.save()
-		self.emit_synchronize(self.current_position, self.is_playing)
+		self.pub_synchronize()
 
 
 	#### PLAYLIST OPERATIONS ####
@@ -293,7 +294,7 @@ class Room(Base):
 		self.dbsession.add(entry)
 		self.save()
 
-		self.emit_video_added(get_entry_info(entry), entry.position)
+		self.pub_plist_add(get_entry_info(entry), entry.position)
 
 		# If the playlist had ended before we added the video, play the one we just added.
 		if was_ended:
@@ -316,7 +317,7 @@ class Room(Base):
 		self.playlist.remove(self.playlist[index])
 		self.save()
 
-		self.emit_videos_removed([index])
+		self.pub_videos_removed([index])
 
 		# If we're removing the currently playing video, call change video to change to the new currently playing video.
 		if not before_current and index == self.playlist_position:
@@ -332,8 +333,8 @@ class Room(Base):
 		shuffle(self.playlist)
 		self.playlist_position = self.playlist.index(current)
 		self.save()
-		self.emit_playlist_update([get_entry_info(entry) for entry in self.playlist])
-		self.emit_video_changed(self.playlist_position, self.current_video_id)
+		self.pub_plist_update()
+		self.pub_video_changed()
 
 	def change_video(self, index, time_padding=3):
 		"""
@@ -351,7 +352,7 @@ class Room(Base):
 		self.start_timestamp = time.time()
 		self.is_playing = True
 		self.save()
-		self.emit_video_changed(self.playlist_position, self.current_video_id)
+		self.pub_video_changed()
 
 	def check_video_ended(self):
 		"""
@@ -400,6 +401,7 @@ class Room(Base):
 		user.video_changed(self.playlist_position, self.current_video_id)
 		userset_update()
 		self.userlist_update()
+		self.pub_ulist_update()
 
 	def remove_user(self, user):
 		"""
@@ -409,6 +411,7 @@ class Room(Base):
 		red.srem(uset_key, user.name)
 		userset_update()
 		self.userlist_update()
+		self.pub_ulist_update()
 
 
 	#### CHAT OPERATIONS ####
@@ -420,7 +423,7 @@ class Room(Base):
 		Does nothing if message is empty, unless force_post is set to true True.
 		"""
 		if len(message) > 0 or force_post:
-			self.emit_chat_message(message, user, action=action)
+			self.pub_chat_message(message, user, action=action)
 
 
 	##########
@@ -428,13 +431,18 @@ class Room(Base):
 	##########
 	# Code relating to the room's events that are passed to the connected users.
 
-	def emit_synchronize(self, video_time, is_playing):
+	def emit_synchronize(self, video_time=None, is_playing=None):
+		if video_time is None: video_time = self.current_position
+		if is_playing is None: is_playing = self.is_playing
 		[user.synchronize(video_time, is_playing) for user in self.connected_users]
 
-	def emit_video_changed(self, playlist_position, video_id):
+	def emit_video_changed(self, playlist_position=None, video_id=None):
+		if playlist_position is None: playlist_position = self.playlist_position
+		if video_id is None: video_id = self.video_id
 		[user.video_changed(playlist_position, video_id) for user in self.connected_users]
 
-	def emit_playlist_update(self, entries):
+	def emit_playlist_update(self, entries=None):
+		if entries is None: entries = [get_entry_info(entry) for entry in self.playlist]
 		[user.playlist_update(entries) for user in self.connected_users]
 
 	def emit_video_added(self, entry, index):
@@ -457,6 +465,47 @@ class Room(Base):
 
 	def emit_config_update(self):
 		[user.config_update(self) for user in self.connected_users]
+
+
+	####################
+	# PUBLISH MESSAGES #
+	####################
+	# Functions for publishing messages for the other servers over redis.
+
+	def redis_publish(self, event, **kwargs):
+		data = { "room": self.slug, "event": event }
+		data.update(kwargs)
+		red.publish("rooms", json.dumps(data))
+
+	def pub_synchronize(self):
+		self.redis_publish("sync")
+
+	def pub_video_changed(self):
+		self.redis_publish("video_changed")
+
+	def pub_plist_update(self):
+		self.redis_publish("playlist_change", change_type="update")
+
+	def pub_plist_add(self, entry, index):
+		self.redis_publish("playlist_change", change_type="add", entry=entry, index=index)
+
+	def pub_plist_remove(self, indices):
+		self.redis_publish("playlist_change", change_type="remove", indices=indices)
+
+	def pub_plist_move(self, old_index, new_index):
+		self.redis_publish("playlist_change", change_type="move", old_index=old_index, new_index=new_index)
+
+	def pub_ulist_update(self):
+		self.redis_publish("userlist_update")
+
+	def pub_chat_message(self, message, from_user, action=False):
+		self.redis_publish("chat_message", message_type="chat", user=from_user.name, message=message, action=action)
+
+	def pub_status_message(self, message, msgtype):
+		self.redis_publish("chat_message", message_type="status", message=message, msgtype=msgtype)
+
+	def pub_config_update(self):
+		self.redis_publish("config_update")
 
 
 class PlaylistEntry(Base):

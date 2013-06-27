@@ -2,6 +2,10 @@
 <html>
 
 <head>
+	{% if config.CHARTBEAT_UID %}
+	<script type="text/javascript">var _sf_startpt=(new Date()).getTime()</script>
+	{% endif %}
+
 	{% block head %}
 	<title>{% block title %}Synctron{% endblock %}</title>
 
@@ -102,6 +106,29 @@
 	<script type='text/javascript' src='/static/js/sha384.js'></script>
 
 	<script type='text/javascript' src='/static/js/utils.js'></script>
+	{% endblock %}
+
+	{% block chartbeat %}
+	{% if config.CHARTBEAT_UID %}
+	<script type="text/javascript">
+	var _sf_async_config={uid:{{ config.CHARTBEAT_UID }},domain:"{{ config.CHARTBEAT_DOMAIN }}",useCanonical:true};
+	(function()
+	{
+		function loadChartbeat()
+		{
+			window._sf_endpt=(new Date()).getTime();
+			var e = document.createElement('script');
+			e.setAttribute('language', 'javascript');
+			e.setAttribute('type', 'text/javascript');
+			e.setAttribute('src', '//static.chartbeat.com/js/chartbeat.js');
+			document.body.appendChild(e);
+		}
+		var oldonload = window.onload;
+		window.onload = (typeof window.onload != 'function') ?
+		loadChartbeat : function() { oldonload(); loadChartbeat(); };
+	})();
+	</script>
+	{% endif %}
 	{% endblock %}
 </body>
 

@@ -231,7 +231,8 @@ function initWebSocket()
 
 			// If the index we're removing is less than the index of the currently playing video, 
 			// we'll need to decrement playlist_pos too.
-			playlist_pos--;
+			if (index < playlist_pos)
+				playlist_pos--;
 		});
 		updatePlaylistElement();
 	});

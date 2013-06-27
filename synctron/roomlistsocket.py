@@ -70,6 +70,9 @@ class RoomListNamespace(BaseNamespace):
 		dbsession = db.Session(db.engine)
 		try:
 			for slug, usercount in room_dict.iteritems():
+				if usercount <= 0:
+					continue
+					
 				room = dbsession.query(Room).filter_by(slug=slug).first()
 				if room is None or room.is_private:
 					continue

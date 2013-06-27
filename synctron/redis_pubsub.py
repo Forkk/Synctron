@@ -45,7 +45,7 @@ def playlist_change(data, room, dbsession):
 	elif change_type == "add":
 		room.emit_video_added(data["entry"], data["index"])
 	elif change_type == "remove":
-		room.emit_video_removed(data["indices"])
+		room.emit_videos_removed(data["indices"])
 	elif change_type == "move":
 		room.emit_video_moved(data["old_index"], data["new_index"])
 	else:

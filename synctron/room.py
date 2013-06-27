@@ -317,7 +317,7 @@ class Room(Base):
 		self.playlist.remove(self.playlist[index])
 		self.save()
 
-		self.pub_videos_removed([index])
+		self.pub_plist_remove([index])
 
 		# If we're removing the currently playing video, call change video to change to the new currently playing video.
 		if not before_current and index == self.playlist_position:

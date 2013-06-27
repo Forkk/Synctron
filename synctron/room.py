@@ -438,7 +438,7 @@ class Room(Base):
 
 	def emit_video_changed(self, playlist_position=None, video_id=None):
 		if playlist_position is None: playlist_position = self.playlist_position
-		if video_id is None: video_id = self.video_id
+		if video_id is None: video_id = self.current_video_id
 		[user.video_changed(playlist_position, video_id) for user in self.connected_users]
 
 	def emit_playlist_update(self, entries=None):

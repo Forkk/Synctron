@@ -21,6 +21,7 @@
 from synctron import app, db, red
 from synctron.room import Room, userset_update, user_info_dict, guest_info_dict
 from synctron.user import User
+from synctron.roomlistsocket import broadcast_room_user_list_update
 import gevent
 import json
 
@@ -53,6 +54,7 @@ def playlist_change(data, room, dbsession):
 def userlist_update(data, room, dbsession):
 	"""Message sent to tell Synctron that the user list changed."""
 	userset_update()
+	broadcast_room_user_list_update()
 
 def chat_message(data, room, dbsession):
 	"""Message sent to tell Synctron that a chat or status message was sent."""

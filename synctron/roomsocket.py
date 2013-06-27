@@ -96,7 +96,6 @@ class RoomNamespace(BaseNamespace):
 			try:
 				room = self.get_room()
 				room.remove_user(self)
-				broadcast_room_user_list_update()
 			finally:
 				dbsession.close()
 
@@ -147,7 +146,6 @@ class RoomNamespace(BaseNamespace):
 		self.session["room"] = room_slug
 		self.config_update(room)
 		room.add_user(self)
-		broadcast_room_user_list_update()
 
 	@socketevent
 	@dbaccess
@@ -479,7 +477,6 @@ class RoomNamespace(BaseNamespace):
 		"""
 		Sends the userlist to the client.
 		"""
-		print "update userlist for " + self.name
 		self.emit("userlist_update", 
 			[dict(
 				userinfo, 

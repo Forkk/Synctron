@@ -20,7 +20,7 @@
 
 from socketio.namespace import BaseNamespace
 
-from synctron import app, db, connections as roomsocket_connections
+from synctron import app, db, red
 
 from synctron.room import Room
 
@@ -59,12 +59,12 @@ class RoomListNamespace(BaseNamespace):
 	def send_room_user_list_update(self, broadcast=False):
 		"""Sends the client a list of rooms with the most users."""
 		room_dict = {}
-		for connection in roomsocket_connections:
-			if "room" in connection.session:
-				if connection.session["room"] in room_dict:
-					room_dict[connection.session["room"]] += 1
-				else:
-					room_dict[connection.session["room"]] = 1
+		for room_slug in red.smembers("rooms"):
+			userset = set()
+			usetlist = red.smembers("room:%s" % room_slug)
+			if len(usetlist) > 0:
+				userset = red.sunion(usetlist)
+			room_dict[room_slug] = len(userset)
 
 		room_list = []
 		dbsession = db.Session(db.engine)

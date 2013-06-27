@@ -111,7 +111,13 @@
 	{% block chartbeat %}
 	{% if config.CHARTBEAT_UID %}
 	<script type="text/javascript">
-	var _sf_async_config={uid:{{ config.CHARTBEAT_UID }},domain:"{{ config.CHARTBEAT_DOMAIN }}",useCanonical:true};
+	var _sf_async_config=
+	{
+		uid:{{ config.CHARTBEAT_UID }},
+		domain:"{{ config.CHARTBEAT_DOMAIN }}",
+		useCanonical:true,
+		title: {% block chartbeat_title %}document.title{% endblock %},
+	};
 	(function()
 	{
 		function loadChartbeat()

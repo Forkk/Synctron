@@ -3,7 +3,7 @@ www:
     config:
         python_version: v2.7
     processes:
-        app: /home/dotcloud/venv/bin/gunicorn --worker-class socketio.sgunicorn.GeventSocketIOWorker -b 0.0.0.0:$PORT_WWW synctron:app
+        app: /home/dotcloud/venv/bin/gunicorn --worker-class socketio.sgunicorn.GeventSocketIOWorker -b 0.0.0.0:$PORT_WWW -w 1 synctron:app
     ports:
         www: http
     environment:

@@ -30,6 +30,8 @@ from synctron.vidinfo import get_video_info
 from synctron.database import Base, admin_association_table, stars_association_table
 from synctron.user import User
 
+from redis import StrictRedis
+
 import time
 from copy import copy
 from random import shuffle
@@ -400,7 +402,7 @@ class Room(Base):
 		"""
 		user.playlist_update([get_entry_info(entry) for entry in self.playlist])
 		user.video_changed(self.playlist_position, self.current_video_id)
-		userset_update()
+		userset_update(red)
 		self.userlist_update()
 		self.pub_ulist_update()
 
@@ -410,7 +412,7 @@ class Room(Base):
 		"""
 		uset_key = "room:%s:%s" % (self.slug, str(workerid))
 		red.srem(uset_key, user.name)
-		userset_update()
+		userset_update(red)
 		self.userlist_update()
 		self.pub_ulist_update()
 
@@ -545,11 +547,12 @@ def userset_greenlet():
 	while True:
 		gevent_sleep(5)
 		try:
-			userset_update()
+			local_red = StrictRedis.from_url(app.config.get("REDIS_URL"))
+			userset_update(local_red)
 		except:
 			app.logger.error("Exception in user set polling greenlet.", exc_info=True)
 
-def userset_update():
+def userset_update(red):
 	global userset_dict
 	uset_hash_key = "worker:" + str(workerid)
 	uset_hash = red.hgetall(uset_hash_key)

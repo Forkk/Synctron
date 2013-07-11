@@ -18,18 +18,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from gevent import monkey, spawn as gevent_spawn
+monkey.patch_all()
+
 from flask import Flask
 from flask.ext.sqlalchemy import SQLAlchemy
 
-from gevent import monkey, spawn as gevent_spawn
-
 from synctron.sessioninterface import ItsdangerousSessionInterface
-
-from redis import StrictRedis
 
 import uuid
 
-monkey.patch_all()
+
+from redis import StrictRedis
 
 app = Flask(__name__)
 app.config.from_object("synctron.default_settings")

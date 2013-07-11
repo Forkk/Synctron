@@ -18,15 +18,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from synctron import app, db, red
+from synctron import app, db
 from synctron.room import Room, userset_update, user_info_dict, guest_info_dict
 from synctron.user import User
 from synctron.roomlistsocket import broadcast_room_user_list_update
+
+from redis import StrictRedis
+
 import gevent
 import json
-
-ps = red.pubsub()
-
 
 def synchronize_all(data, room, dbsession):
 	"""Message sent to tell Synctron to sync all users in the given room."""
@@ -78,6 +78,8 @@ def config_update(data, room, dbsession):
 
 def redis_message_loop():
 	"""Loop for processing PubSub messages on Redis."""
+	red = StrictRedis.from_url(app.config.get("REDIS_URL"))
+	ps = red.pubsub()
 	ps.subscribe("rooms")
 
 	message = None

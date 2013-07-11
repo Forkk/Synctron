@@ -29,8 +29,7 @@ monkey.patch_all() # May need more bananas...
 def run_dev_server():
 	app.debug = True
 	port = 8000
-	SocketIOServer(('', port), app, resource="socket.io").serve_forever()
-	app.run(host = "localhost", port = 8000, debug = True)
+	SocketIOServer(('0.0.0.0', port), app, resource="socket.io").serve_forever()
 
 if __name__ == "__main__":
 	run_dev_server()

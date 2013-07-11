@@ -19,11 +19,4 @@ data:
     type: mysql
 
 redis:
-    type: custom
-    buildscript: redis_builder.sh
-    postinstall: ./redis_postinstall.sh
-    ports:
-        redis: tcp
-    systempackages:
-        - tcl8.5
-    process: ./redis-server redis.conf
+    type: redis
